@@ -264,7 +264,7 @@ class Grow():
 	# val = rotation in radians
 	# ax = x, y or z
 	def rotate(self, val, x ,c=(False, False, False)):
-		bpy.ops.transform.rotate(value=[val], axis=x, constraint_axis=c, constraint_orientation='GLOBAL', mirror=False, proportional=bpy.context.tool_settings.proportional_edit, proportional_edit_falloff=bpy.context.tool_settings.proportional_edit_falloff, proportional_size=1, snap=bpy.context.tool_settings.use_snap, snap_target=bpy.context.tool_settings.snap_target, snap_point=(0, 0, 0), snap_align=False, snap_normal=(0, 0, 0), release_confirm=False)
+		bpy.ops.transform.rotate(value=val, axis=x, constraint_axis=c, constraint_orientation='GLOBAL', mirror=False, proportional=bpy.context.tool_settings.proportional_edit, proportional_edit_falloff=bpy.context.tool_settings.proportional_edit_falloff, proportional_size=1, snap=bpy.context.tool_settings.use_snap, snap_target=bpy.context.tool_settings.snap_target, snap_point=(0, 0, 0), snap_align=False, snap_normal=(0, 0, 0), release_confirm=False)
 		
 		
 		
