@@ -24,8 +24,8 @@
 bl_info = {
 	"name": "Self shadow",
 	"author": "Dolf Veenvliet",
-	"version": (0,3),
-	"blender": (2, 5, 7),
+	"version": (0,4),
+	"blender": (2, 6, 5),
 	"api": 35851,
 	"location": "View3D > Paint > Self shadow",
 	"description": "Create vertex colours based on the mesh's angles",
@@ -45,7 +45,7 @@ Additional links:
 	e-mail: dolf {at} macouno {dot} com
 """
 
-import bpy, colorsys, math
+import bpy, colorsys, math, mathutils
 from bpy.props import EnumProperty, BoolProperty, FloatProperty
 
 # Grow stuff!
@@ -83,8 +83,8 @@ class Self_shadow():
 		self.vCols = self.me.vertex_colors.active.data
 		
 		# Get the angles
-		if method == 'FAC':
-			self.useFaces()
+		if method == 'POL':
+			self.usePolygons()
 		else:
 			self.useEdges()
 			
@@ -99,24 +99,32 @@ class Self_shadow():
 		
 		
 	# Use the mabaker method (uses face normals, for slower but smoother result)
-	def useFaces(self):
+	def usePolygons(self):
 	
-		for f in self.me.faces:
+		for p in self.me.polygons:
 		
-			cent = f.center
-		
-			for iOne in f.vertices:
+			cent = mathutils.Vector()
+			vList = []
 			
-				vOne = self.me.vertices[iOne]
-				vecOne = vOne.co - cent
-				
+			# Get the center point for each polygon
+			for loop_index in range(p.loop_start, p.loop_start + p.loop_total):
+				vIndex = self.me.loops[loop_index].vertex_index
+				v = self.me.vertices[vIndex]
+				vList.append([vIndex,v])
+				cent += v.co
+		
+			cent /= p.loop_total
+		
+			# Now get the angle between the vert normal and the center
+			# Get the center point for each polygon
+			for vIndex, v in vList:
+				vecOne = v.co - cent
+		
 				try:
-					self.angles[iOne] += vecOne.angle(vOne.normal)
-					
-					self.totAngles[iOne] += 1
+					self.angles[vIndex] += vecOne.angle(v.normal)
+					self.totAngles[vIndex] += 1
 				except:
 					continue
-	
 	
 	
 	
@@ -181,57 +189,47 @@ class Self_shadow():
 			
 			
 	def applyColours(self):
-		
-		# Set the vert colours for each face
-		for f in self.me.faces:
 
-			f_col = self.me.vertex_colors.active.data[f.index]
-			for i, v in enumerate(f.vertices):
-			
+		# Make sure there are vertex colours
+		try:
+			vertex_colors = self.me.vertex_colors.active
+		except:
+			vertex_colors =self.me.vertex_colors.new(name="Self Shadow")
+
+		self.me.vertex_colors.active = vertex_colors
+
+		for p in self.me.polygons:
+		
+			for loop in p.loop_indices:
+				v = self.me.loops[loop].vertex_index
+				col_out = vertex_colors.data[loop].color
+				
 				# Get the actual angle (we might have added multiple up)
 				if (not self.normalize) and self.totAngles[v] > 1:
 					angle = self.angles[v] / self.totAngles[v]
 				else:
 					angle = self.angles[v]
 					
+				print(self.range)
+					
 				# The value is relative to pi (180 degrees)
+				if not self.range: self.range = 1.0
 				val =1.0 - ((angle-self.minimum)/self.range)
 				
 				# So lets make the val between -1 and + 1
 				if self.contrast:
 					
 					val = val ** self.contrast
-				
 					val = 1.0 - val
 				
 					val = val ** self.contrast
-				
 					val = 1.0 - val
 				
-				if not i:
-					ori = f_col.color1
-					v_col = colorsys.rgb_to_hsv(ori[0],ori[1],ori[2])
-					if val > v_col[2]: val = v_col[2]
-					v_col = colorsys.hsv_to_rgb(v_col[0],v_col[1],val)
-					f_col.color1 = v_col
-				elif i == 1:
-					ori = f_col.color2
-					v_col = colorsys.rgb_to_hsv(ori[0],ori[1],ori[2])
-					if val > v_col[2]: val = v_col[2]
-					v_col = colorsys.hsv_to_rgb(v_col[0],v_col[1],val)
-					f_col.color2 = v_col
-				elif i == 2:
-					ori = f_col.color3
-					v_col = colorsys.rgb_to_hsv(ori[0],ori[1],ori[2])
-					if val > v_col[2]: val = v_col[2]
-					v_col = colorsys.hsv_to_rgb(v_col[0],v_col[1],val)
-					f_col.color3 = v_col
-				elif i == 3:
-					ori = f_col.color4
-					v_col = colorsys.rgb_to_hsv(ori[0],ori[1],ori[2])
-					if val > v_col[2]: val = v_col[2]
-					v_col = colorsys.hsv_to_rgb(v_col[0],v_col[1],val)
-					f_col.color4 = v_col
+				ori = vertex_colors.data[loop].color
+				v_col = colorsys.rgb_to_hsv(ori[0],ori[1],ori[2])
+				if val > v_col[2]: val = v_col[2]
+				v_col = colorsys.hsv_to_rgb(v_col[0],v_col[1],val)
+				vertex_colors.data[loop].color = v_col
 		
 				
 
@@ -245,7 +243,7 @@ class Self_shadow_init(bpy.types.Operator):
 	
 	# The methods we use
 	methods=(
-		('FAC', 'Faces', ''),
+		('POL', 'Polygons', ''),
 		('EDG', 'Edges', ''),
 		)
 		
