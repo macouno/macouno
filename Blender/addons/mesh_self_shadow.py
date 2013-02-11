@@ -210,8 +210,6 @@ class Self_shadow():
 				else:
 					angle = self.angles[v]
 					
-				print(self.range)
-					
 				# The value is relative to pi (180 degrees)
 				if not self.range: self.range = 1.0
 				val =1.0 - ((angle-self.minimum)/self.range)
