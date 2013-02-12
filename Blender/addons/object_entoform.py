@@ -53,13 +53,13 @@ from macouno import mesh_extras, misc, colour, select_polygons, falloff_curve, l
 class Entoform():
 
 	# Initialise the class
-	def __init__(self, context, dnaString, subdivide, keepgroups, finish, run):
+	def __init__(self, context, dnaString, subdivide, steplimit, keepgroups, finish, run):
 	
 		if not run:
 			return
 	
 		# Start by setting up some default vars and such (in sepparate function because it's a bit much)
-		self.setup(context, dnaString, keepgroups)
+		self.setup(context, dnaString, steplimit, keepgroups)
 		
 		# GO make the DNA strings
 		self.createDNA()
@@ -108,6 +108,10 @@ class Entoform():
 	# Go grow something!
 	def executeDNA(self, string, baseGroups, baseWeight):
 		
+		
+		if self.steplimit and string['number'] >= self.steplimit:
+			print('Reached steplimit',self.steplimit,'STOPPING')
+			return
 		'''
 		if string['number'] >= 1:
 			#if string['number'] in [0,1,3]:
@@ -542,7 +546,7 @@ class Entoform():
 				if p.select:
 					if a['colorstyle'] == 'soft':
 						for v in p.vertices:
-							self.applyColorToVert(v, vec)
+							colour.applyColorToVertex(v, vec)
 					else:
 						selVerts.extend(p.vertices)
 						outPolygons.append(p)
@@ -1298,7 +1302,7 @@ class Entoform():
 		
 		
 	# Start with some setup
-	def setup(self, context, dnaString, keepgroups):
+	def setup(self, context, dnaString, steplimit, keepgroups):
 	
 		print("\n\n->-> Starting Entorform <-<-\n")
 		print('  - DNA string',dnaString,"\n")
@@ -1308,6 +1312,7 @@ class Entoform():
 		self.me = self.ob.data
 		
 		self.dnaString = dnaString
+		self.steplimit = steplimit
 		
 		# Split the dna string into two parts if possible
 		prt = dnaString.partition(' ')
@@ -1596,17 +1601,20 @@ class Entoform_init(bpy.types.Operator):
 	bl_label = 'Entoform'
 	bl_options = {'REGISTER', 'UNDO'}
 	
-	d='a'
+	d='Selina'
+	limit = 1
 
 	dnaString = StringProperty(name="DNA", description="DNA string to define your shape", default=d, maxlen=100)
 	
 	subdivide = IntProperty(name='Subdivide', default=0, min=0, max=10, soft_min=0, soft_max=100)
 	
+	steplimit = IntProperty(name='Steplimit', default=limit, min=0, max=100, soft_min=0, soft_max=1000)
+	
 	keepgroups = BoolProperty(name='Keep groups', description='Do not remove the added vertex groups', default=True)
 	
 	finish = BoolProperty(name='Finish', description='Do some final touches', default=False)
 	
-	run = BoolProperty(name='Execute', description='Go and actually do this', default=True)
+	run = BoolProperty(name='Execute', description='Go and actually do this', default=False)
 
 	@classmethod
 	def poll(cls, context):
@@ -1614,7 +1622,7 @@ class Entoform_init(bpy.types.Operator):
 		return (obj and obj.type == 'MESH')
 
 	def execute(self, context):
-		ENTOFORM = Entoform(context, self.dnaString, self.subdivide, self.keepgroups, self.finish, self.run) 
+		ENTOFORM = Entoform(context, self.dnaString, self.subdivide, self.steplimit, self.keepgroups, self.finish, self.run) 
 		return {'FINISHED'}
 
 

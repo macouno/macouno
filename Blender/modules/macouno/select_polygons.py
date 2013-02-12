@@ -15,6 +15,8 @@ def none():
 	me = bpy.context.active_object.data
 	for p in me.polygons:
 		p.select = False
+	for v in me.vertices:
+		v.select = False
 	for e in me.edges:
 		e.select = False
 	return

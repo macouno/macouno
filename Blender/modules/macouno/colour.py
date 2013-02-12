@@ -75,7 +75,7 @@ def applyColorToVertex(vIndex, vCol):
 	for p in me.polygons:
 
 		for loop in p.loop_indices:
-			if loop.vertex_index == vIndex:
+			if me.loops[loop].vertex_index == vIndex:
 				vertex_colors.data[loop].color = vCol
 
 				
