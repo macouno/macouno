@@ -47,7 +47,7 @@ Additional links:
 import bpy, mathutils, math, cProfile, colorsys, datetime, time
 from mathutils import geometry
 from bpy.props import StringProperty, IntProperty, BoolProperty
-from macouno import mesh_extras, misc, colour, select_faces, falloff_curve, liberty
+from macouno import mesh_extras, misc, colour, select_polygons, falloff_curve, liberty
 
 # Make it as a class
 class Entoform():
@@ -163,11 +163,11 @@ class Entoform():
 				self.ob['growmatrix'] = growmatrix
 			
 				# Select a group
-				select_faces.none()
-				select_faces.in_group(group)
+				select_polygons.none()
+				select_polygons.in_group(group)
 				
-				# No need to continue if we have no selected faces
-				if not mesh_extras.contains_selected_item(self.me.faces):
+				# No need to continue if we have no selected polygons
+				if not mesh_extras.contains_selected_item(self.me.polygons):
 					print(pad,'skip ',stepText,'no selection',string['action']['name'])
 					
 				else:
@@ -226,12 +226,13 @@ class Entoform():
 								)
 							
 						bpy.ops.object.mode_set(mode='OBJECT')
-							
 						
-						select_faces.none()
-						select_faces.in_group(group)
+						
+						select_polygons.none()
+						select_polygons.in_group(group)
 						
 						self.applyGrowthColor(a)
+						
 						if a['type'] == 'grow':
 							self.applyGrowthCrease(a)
 						
@@ -511,39 +512,41 @@ class Entoform():
 	
 		# Just apply the vertex colour to all the verts if it applies... easy!
 		if self.options['palettes']:
-		
+			
 			vec = list(a['vertexcolor'])
-			selFaces = []
+			selPolygons = []
 			
-			for f in self.ob.data.faces:
-			
-				if f.select:
-					selFaces.append(f)
+			for p in self.ob.data.polygons:
+				
+				if p.select:
+					selPolygons.append(p)
 					
 					if a['colorstyle'] == 'soft':
-						for v in f.vertices:
-							self.applyColorToVert(v, vec)
-							
-					else:
-						self.applyColorToFace(f.index, vec)
 						
-			select_faces.outermost()
+						for v in p.vertices:
+							colour.applyColorToVertex(v, vec)
+						
+					else:
+						
+						colour.applyColorToPolygon(p.index, vec)
+						
+			select_polygons.outermost()
 			
 			vec = list(a['jointcolor'])
 			
 			selVerts = []
-			outFaces = []
+			outPolygons = []
 			
-			for f in self.ob.data.faces:
+			for p in self.ob.data.polygons:
 			
-				if f.select:
+				if p.select:
 					if a['colorstyle'] == 'soft':
-						for v in f.vertices:
+						for v in p.vertices:
 							self.applyColorToVert(v, vec)
 					else:
-						selVerts.extend(f.vertices)
-						outFaces.append(f)
-						self.applyColorToFace(f.index, vec)
+						selVerts.extend(p.vertices)
+						outPolygons.append(p)
+						colour.applyColorToPolygon(p.index, vec)
 						
 			# Lets make some sharp edges
 			if  a['type'] == 'bump' and a['colorstyle'] == 'hard':
@@ -559,14 +562,14 @@ class Entoform():
 						ond = 0
 						snd = 0
 						
-						# See how many faces this edge is part of
-						for f in outFaces:
-							if v0 in f.vertices and v1 in f.vertices:
+						# See how many polygons this edge is part of
+						for p in outPolygons:
+							if v0 in p.vertices and v1 in p.vertices:
 								ond += 1
 								
-						for f in selFaces:
-							if not f in outFaces:
-								if v0 in f.vertices and v1 in f.vertices:
+						for p in selPolygons:
+							if not p in outPolygons:
+								if v0 in p.vertices and v1 in p.vertices:
 									snd += 1
 								
 						# If the edge is only part of one seleced face it's on the outside
@@ -588,9 +591,9 @@ class Entoform():
 								e.use_edge_sharp = True
 							'''
 						
-			# Set the selection of faces back to the original
-			for f in selFaces:
-				f.select = True
+			# Set the selection of polygons back to the original
+			for p in selPolygons:
+				p.select = True
 				
 					
 					
@@ -606,12 +609,12 @@ class Entoform():
 			# Loop through all the steps
 			for i in range(int(steps)):
 			
-				select_faces.outermost(True)		
+				select_polygons.outermost(True)		
 			
 				# Find all the selected vertices
-				selFaces = mesh_extras.get_selected_faces()
+				selPolygons = mesh_extras.get_selected_polygons()
 				selVerts = []
-				for f in selFaces:
+				for f in selPolygons:
 					selVerts.extend(f.vertices)
 				
 				# Loop through all edges
@@ -624,46 +627,7 @@ class Entoform():
 
 					if len(intersection) == 1 and e.crease < 1.0:
 						e.crease = vec
-						
-						
-						
-	# Apply a color to a face for a harsh transition
-	def applyColorToFace(self, fInd, vCol):
-	
-		# Get the faces
-		face = bpy.context.active_object.data.faces[fInd]
-		vColFace = self.me.vertex_colors.active.data[fInd]
-	
-		vColFace.color1 = vCol
-		vColFace.color2 = vCol
-		vColFace.color3 = vCol
-		if len(face.vertices) == 4:
-			vColFace.color4 = vCol
-			
-					
-					
-	# Apply a vertex colour to a vert
-	def applyColorToVert(self, vInd, vCol):
-		
-		# Get the faces
-		for f in bpy.context.active_object.data.faces:
-			if vInd in f.vertices:
-				vColFace = self.me.vertex_colors.active.data[f.index]
-			
-				for r, v in enumerate(f.vertices):
-				
-					if v == vInd:
-					
-						if not r:
-							vColFace.color1 = vCol
-						elif r == 1:
-							vColFace.color2 = vCol
-						elif r == 2:
-							vColFace.color3 = vCol
-						elif r == 3:
-							vColFace.color4 = vCol
-							
-						break
+
 	
 	
 	
@@ -689,7 +653,7 @@ class Entoform():
 				
 			elif type == 'legs':
 				selection['vector'] = mathutils.Vector((1.0,0.0,0.0))
-				selection['area'] = 'faces'
+				selection['area'] = 'polygons'
 				
 			elif type == 'lowerlegs':
 				selection['vector'] = self.choose('select', 'local_directions', 'selection direction')
@@ -708,7 +672,7 @@ class Entoform():
 		
 			
 			selection['type'] = self.choose('select', 'selectioneyes', 'selection type')
-			selection['area'] = 'faces'
+			selection['area'] = 'polygons'
 		
 			selection['method'] = 'limited'
 				
@@ -718,7 +682,7 @@ class Entoform():
 			selection['type'] = self.choose('select', 'selectiontypes', 'selection type')
 			
 			if selection['type'] == 'all':
-				selection['area'] = 'faces'
+				selection['area'] = 'polygons'
 			
 			elif selection['type'] == 'direction':
 				selection['vector'] = self.choose('select', 'local_directions', 'selection direction')
@@ -728,10 +692,10 @@ class Entoform():
 				selection['divergence'] =  self.choose('float', 'divergence', 'directional divergence')
 				
 			elif selection['type'] == 'liberal':
-				selection['area'] = 'faces'
+				selection['area'] = 'polygons'
 				
 			elif selection['type'] == 'checkered':
-				selection['area'] = 'faces'
+				selection['area'] = 'polygons'
 				
 			elif selection['type'] == 'loops':
 				selection['frequency'] = self.choose('select', 'frequencies', 'loop frequencies')
@@ -746,7 +710,7 @@ class Entoform():
 				selection['divergence'] = self.choose('float', 'divergence', 'directional divergence')
 					
 					
-		if selection['area'] == 'faces':
+		if selection['area'] == 'polygons':
 			selection['limit'] =  self.choose('int', 'limit', 'selection limit')
 			
 		selection['formmatrix'] = ''
@@ -775,7 +739,7 @@ class Entoform():
 		
 	# Remove the items in the current group from all others
 	def cleanGroup(self, group):
-	
+		
 		bpy.ops.object.mode_set(mode='EDIT')
 		self.ob.vertex_groups.active_index = group.index
 		
@@ -800,7 +764,7 @@ class Entoform():
 		
 		
 		
-	# Make all the faces that are affected selected and return them as a list
+	# Make all the polygons that are affected selected and return them as a list
 	def makeAffectedGroups(self, string, baseGroups):
 			
 		selection = string['selection']
@@ -808,46 +772,46 @@ class Entoform():
 		formmatrix = mathutils.Matrix()
 		growmatrices = []
 		
-		# Deselect all faces to start clean!
-		select_faces.none()
+		# Deselect all polygons to start clean!
+		select_polygons.none()
 		
 		# Select everything in the base groups
 		for g in baseGroups:
-			select_faces.in_group(g,True)
+			select_polygons.in_group(g,True)
 			
-		#print('in_group',len(mesh_extras.get_selected_faces()))
+		#print('in_group',len(mesh_extras.get_selected_polygons()))
 			
 		# If nothing is selected there's nothing to do
-		if mesh_extras.contains_selected_item(self.me.faces):
+		if mesh_extras.contains_selected_item(self.me.polygons):
 		
-			# Select the faces at the tip in a certain direction
+			# Select the polygons at the tip in a certain direction
 			if selection['type'] == 'joint' or selection['type'] == 'tip':
 			
-				select_faces.innermost()
+				select_polygons.innermost()
 					
-				if mesh_extras.contains_selected_item(self.me.faces):
+				if mesh_extras.contains_selected_item(self.me.polygons):
 					
 					if selection['type'] == 'joint':
 					
-						select_faces.connected(True)
+						select_polygons.connected(True)
 						
-						selCnt = len(mesh_extras.get_selected_faces())
+						selCnt = len(mesh_extras.get_selected_polygons())
 						nuCnt = selCnt
 						div = selection['divergence']
 						
-						# If the nr of faces selected isn't diminished... we select less!
+						# If the nr of polygons selected isn't diminished... we select less!
 						while selCnt and selCnt == nuCnt and div > 0.1:
 						
-							select_faces.by_direction(selection['vector'],div)
+							select_polygons.by_direction(selection['vector'],div)
 							div = div * 0.75
-							selFaces = mesh_extras.get_selected_faces()
-							nuCnt = len(selFaces)
+							selPolygons = mesh_extras.get_selected_polygons()
+							nuCnt = len(selPolygons)
 							
 						# Check for opposing normals.. .cause they should not be there!
-						for f1 in selFaces:
+						for f1 in selPolygons:
 							if f1.select:
 								f1No = f1.normal
-								for f2 in selFaces:
+								for f2 in selPolygons:
 									if f2.select and not f1 is f2:
 										f2No = f2.normal
 										ang = f2No.angle(f1No)
@@ -855,43 +819,43 @@ class Entoform():
 											f1.select = False
 											break
 						
-						selFaces = mesh_extras.get_selected_faces()
-						nuCnt = len(selFaces)
+						selPolygons = mesh_extras.get_selected_polygons()
+						nuCnt = len(selPolygons)
 							
 						if nuCnt == selCnt:
-							select_faces.none()
+							select_polygons.none()
 					
-					# If we have selected faces... we can add em to a new group
+					# If we have selected polygons... we can add em to a new group
 					newGroups, formmatrix, growmatrices = self.addToNewGroups(string, newGroups, growmatrices)
 					
 			
 			# Select by pi (fake random)
 			elif selection['type'] == 'liberal':
 			
-				select_faces.liberal(self.dnaString)
+				select_polygons.liberal(self.dnaString)
 				
-				# If we have selected faces... we can add em to a new group
+				# If we have selected polygons... we can add em to a new group
 				newGroups, formmatrix, growmatrices = self.addToNewGroups(string, newGroups, growmatrices)
 				
 				
 			# Select all loops in the group
 			elif selection['type'] == 'loops':
 				
-				select_faces.connected()
+				select_polygons.connected()
 				self.deselectUnGrouped()
 				
 				step = 0
 				
 				# As long as something is selected, we can continue
-				while mesh_extras.contains_selected_item(self.ob.data.faces):
+				while mesh_extras.contains_selected_item(self.ob.data.polygons):
 					
-					select_faces.connected()
+					select_polygons.connected()
 					self.deselectGrouped(baseGroups)
 					
 					# Skip selection just in case
 					if not step % selection['frequency']:
 						
-						# If we have selected faces... we can add em to a new group
+						# If we have selected polygons... we can add em to a new group
 						newGroups, formmatrix, grw = self.addToNewGroups(string, newGroups, growmatrices)
 						growmatrices.extend(grw)
 						
@@ -903,7 +867,7 @@ class Entoform():
 			# Select by direction
 			elif selection['type'] == 'direction':
 
-				select_faces.by_direction(selection['vector'],selection['divergence'])
+				select_polygons.by_direction(selection['vector'],selection['divergence'])
 				
 				newGroups, formmatrix, growmatrices = self.addToNewGroups(string, newGroups, growmatrices)
 				
@@ -915,21 +879,21 @@ class Entoform():
 		
 		
 	
-	# Deselect all the faces that are not in a group
+	# Deselect all the polygons that are not in a group
 	def deselectUnGrouped(self):
 	
-		# Get the faces (and go into object mode)
-		faces = mesh_extras.get_selected_faces()
+		# Get the polygons (and go into object mode)
+		polygons = mesh_extras.get_selected_polygons()
 		
-		if len(faces):
+		if len(polygons):
 		
-			for f in faces:
-				if f.select:
+			for p in polygons:
+				if p.select:
 				
 					inGroup = True
 					
 					# See all the verts (all should be in the group!)
-					for v in f.vertices:
+					for v in p.vertices:
 					
 						found = False
 						vert = self.ob.data.vertices[v]
@@ -942,29 +906,29 @@ class Entoform():
 							inGroup = False
 							
 					if not inGroup:
-						f.select = False
+						p.select = False
 		
 						
 		
-	# Deselect all faces that are already grouped, but not in the baseGroups
+	# Deselect all polygons that are already grouped, but not in the baseGroups
 	def deselectGrouped(self, baseGroups):
 	
-		# Get the faces (and go into object mode)
-		faces = mesh_extras.get_selected_faces()
+		# Get the polygons (and go into object mode)
+		polygons = mesh_extras.get_selected_polygons()
 		
-		if len(faces):
+		if len(polygons):
 						
-			# First lets make sure the faces are in the current base groups
+			# First lets make sure the polygons are in the current base groups
 			for g in baseGroups:
 			
-				# Check all selected faces
-				for f in faces:
-					if f.select:
+				# Check all selected polygons
+				for p in polygons:
+					if p.select:
 					
 						inGroup = True
 						
 						# See all the verts (all should be in the group!)
-						for v in f.vertices:
+						for v in p.vertices:
 						
 							found = False
 							vert = self.ob.data.vertices[v]
@@ -977,23 +941,23 @@ class Entoform():
 								inGroup = False
 								
 						if not inGroup:
-							f.select = False
+							p.select = False
 						
-			faces = mesh_extras.get_selected_faces()
+			polygons = mesh_extras.get_selected_polygons()
 			
-			if len(faces):
+			if len(polygons):
 	
 				for g in self.newGroups:
 					if not g in baseGroups:
 						
-						# Check all selected faces
-						for f in faces:
-							if f.select:
+						# Check all selected polygons
+						for p in polygons:
+							if p.select:
 							
 								inGroup = True
 								
 								# See all the verts (all should be in the group!)
-								for v in f.vertices:
+								for v in p.vertices:
 								
 									found = False
 									vert = self.ob.data.vertices[v]
@@ -1006,7 +970,7 @@ class Entoform():
 										inGroup = False
 										
 								if inGroup:
-									f.select = False
+									p.select = False
 				
 		
 		
@@ -1016,17 +980,17 @@ class Entoform():
 		selection = string['selection']
 		self.doubleCheckSelection(selection)
 	
-		faces = mesh_extras.get_selected_faces()
+		polygons = mesh_extras.get_selected_polygons()
 		
 		formmatrix = mathutils.Matrix()
 		growmatrices = []
 		
-		if len(faces):
+		if len(polygons):
 		
 			verts = []
 			inds = []
-			for f in faces:
-				for v in f.vertices:
+			for p in polygons:
+				for v in p.vertices:
 					if not v in inds:
 						inds.append(v)
 						verts.append(self.me.vertices[v])
@@ -1036,7 +1000,7 @@ class Entoform():
 
 				weights = self.makeWeights(verts)
 				
-				formmatrix = mesh_extras.get_selection_matrix(faces)
+				formmatrix = mesh_extras.get_selection_matrix(polygons)
 				
 				# If we do this per area, we want the entire area to be part of one group
 				if selection['area'] == 'area':
@@ -1049,17 +1013,17 @@ class Entoform():
 							newGroup.add([v.index], 1.0, 'REPLACE')
 					
 				# If we have it per face, we need sepparate weights and groups
-				elif selection['area'] == 'faces':
+				elif selection['area'] == 'polygons':
 				
-					if len(faces):
+					if len(polygons):
 					
-						for i, f in enumerate(faces):
-							growmatrices.append(mesh_extras.get_selection_matrix([f]))
+						for i, p in enumerate(polygons):
+							growmatrices.append(mesh_extras.get_selection_matrix([p]))
 							newGroup = self.ob.vertex_groups.new(string['name']+'.'+selection['type']+'.'+misc.nr4(i))
 							newGroups.append(newGroup)
 							self.newGroups.append(newGroup)
 							
-							vertList = f.vertices
+							vertList = p.vertices
 							
 							for i,v in enumerate(verts):
 								ind = v.index
@@ -1090,12 +1054,12 @@ class Entoform():
 	# Just some nice checks to do with selections
 	def doubleCheckSelection(self, selection):
 		
-		# Make sure there's never more than 12 faces we grow out of
-		if selection['area'] == 'faces':
-			select_faces.limit(selection['limit'], self.dnaString)
+		# Make sure there's never more than 12 polygons we grow out of
+		if selection['area'] == 'polygons':
+			select_polygons.limit(selection['limit'], self.dnaString)
 				
 		# If we still have something selected, then we need to check for Islands (only one coninuous island should be selected)
-		if selection['type'] == 'direction' and selection['area'] == 'area' and mesh_extras.contains_selected_item(self.me.faces):
+		if selection['type'] == 'direction' and selection['area'] == 'area' and mesh_extras.contains_selected_item(self.me.polygons):
 			self.checkForIslands(selection['vector'])
 
 			
@@ -1104,46 +1068,56 @@ class Entoform():
 	# Make sure only one "island" is selected
 	def checkForIslands(self, vector):
 		
-		faces = mesh_extras.get_selected_faces()
+		polygons = mesh_extras.get_selected_polygons()
 		
 		# Find the face furthest along the vector
 		max = 0.0
 		closestFace = 0
 		closestVerts = 0
-		for i,f in enumerate(faces):
-			dist = vector.dot(f.center)
+		for i,p in enumerate(polygons):
+		
+			# Get the center point for this polygon... shees
+			cent = mathutils.Vector()
+			for loop_index in range(p.loop_start, p.loop_start + p.loop_total):
+				vIndex = self.me.loops[loop_index].vertex_index
+				v = self.me.vertices[vIndex]
+				cent += v.co
+		
+			cent /= p.loop_total
+		
+			dist = vector.dot(cent)
 			if dist > max or not i:
 				max = dist
-				closestFace = f
-				closestVerts = f.vertices
+				closestPolygon = p
+				closestVerts = p.vertices
 			
-		# Find the faces connected to this one!
-		connectedFaces = [closestFace]
+		# Find the polygons connected to this one!
+		connectedPolygons = [closestPolygon]
 		connectedVerts = list(closestVerts)
 		foundNew = True
 		
-		# As long as we can find connected faces we continue
+		# As long as we can find connected polygons we continue
 		while foundNew:
 			foundNew = False
 			
-			for f in faces:
+			for p in polygons:
 				addThis = False
 				# If we haven't done this one yet
-				if not f in connectedFaces:
+				if not p in connectedPolygons:
 				
-					intersection = [v for v in f.vertices if v in connectedVerts]
+					intersection = [v for v in p.vertices if v in connectedVerts]
 					if len(intersection):
 						addThis = True
 						
 				if addThis:
 					foundNew = True
-					connectedFaces.append(f)
-					connectedVerts.extend(f.vertices)
+					connectedPolygons.append(p)
+					connectedVerts.extend(p.vertices)
 					
-		# Deselect disconnected faces
-		for f in faces:
-			if not f in connectedFaces:
-				f.select = False
+		# Deselect disconnected polygons
+		for p in polygons:
+			if not p in connectedPolygons:
+				p.select = False
 					
 		
 		
@@ -1398,13 +1372,13 @@ class Entoform():
 			'f': mathutils.Vector((0.0,0.0,-1.0)),		#left
 			}
 			
-		self.options['areatypes'] = {'a': 'area','b': 'faces'}
+		self.options['areatypes'] = {'a': 'area','b': 'polygons'}
 		self.options['frequencies'] = {'a': 1, 'b': 2}
 		self.options['colorstyles'] = {'a': 'hard','b': 'soft'}
 		
 		self.getPalette()
 		
-		# Set the editing to face mode only
+		# Set the editing to polygon mode only
 		#bpy.ops.wm.context_set_value(data_path='tool_settings.mesh_select_mode', value="(False, False, True)")
 		
 		self.startTime = time.time()
@@ -1429,16 +1403,14 @@ class Entoform():
 		except:
 			pass
 
-		# Get the vertex colours
-		if not self.ob.data.vertex_colors.active:
-			self.ob.data.vertex_colors.new()
-			for f in self.ob.data.vertex_colors.active.data:
-				try:
-					f.color1 = f.color2 = f.color3 = f.color4 = (0.0,0.0,0.0)
-				except:
-					f.color1 = f.color2 = f.color3 = (0.0,0.0,0.0)
-					
-		self.vCols = self.ob.data.vertex_colors.active.data
+		# Make sure we have vertex colors
+		if self.me.vertex_colors.active:
+			vertex_colors = self.me.vertex_colors.active
+		else:
+			vertex_colors = self.me.vertex_colors.new(name="color")
+			self.me.vertex_colors.active = vertex_colors
+		
+		self.vCols = vertex_colors
 		
 		# Save the dna string in a property if we want!
 		self.ob['dnastring'] = dnaString
@@ -1565,8 +1537,8 @@ class Entoform():
 		
 		
 		# Geometry
-		if 'text-faces' in bpy.data.objects:
-			bpy.data.objects['text-faces'].data.body = str(len(self.ob.data.faces))
+		if 'text-polys' in bpy.data.objects:
+			bpy.data.objects['text-polys'].data.body = str(len(self.ob.data.polygons))
 		if 'text-edges' in bpy.data.objects:
 			bpy.data.objects['text-edges'].data.body = str(len(self.ob.data.edges))
 		if 'text-verts' in bpy.data.objects:
@@ -1624,7 +1596,7 @@ class Entoform_init(bpy.types.Operator):
 	bl_label = 'Entoform'
 	bl_options = {'REGISTER', 'UNDO'}
 	
-	d=''
+	d='a'
 
 	dnaString = StringProperty(name="DNA", description="DNA string to define your shape", default=d, maxlen=100)
 	
@@ -1632,9 +1604,9 @@ class Entoform_init(bpy.types.Operator):
 	
 	keepgroups = BoolProperty(name='Keep groups', description='Do not remove the added vertex groups', default=True)
 	
-	finish = BoolProperty(name='Finish', description='Do some final touches', default=True)
+	finish = BoolProperty(name='Finish', description='Do some final touches', default=False)
 	
-	run = BoolProperty(name='Execute', description='Go and actually do this', default=False)
+	run = BoolProperty(name='Execute', description='Go and actually do this', default=True)
 
 	@classmethod
 	def poll(cls, context):

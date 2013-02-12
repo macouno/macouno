@@ -71,17 +71,6 @@ class Self_shadow():
 		self.angles= [0.0] * leng
 		self.totAngles= [0] * leng
 		
-		# Get the vertex colours
-		if not self.me.vertex_colors.active:
-			self.me.vertex_colors.new('selfshadow')
-			for f in self.me.vertex_colors.active.data:
-				try:
-					f.color1 = f.color2 = f.color3 = f.color4 = (0.0,0.0,0.0)
-				except:
-					f.color1 = f.color2 = f.color3 = (0.0,0.0,0.0)
-					
-		self.vCols = self.me.vertex_colors.active.data
-		
 		# Get the angles
 		if method == 'POL':
 			self.usePolygons()
@@ -191,10 +180,10 @@ class Self_shadow():
 	def applyColours(self):
 
 		# Make sure there are vertex colours
-		try:
+		if self.me.vertex_colors.active:
 			vertex_colors = self.me.vertex_colors.active
-		except:
-			vertex_colors =self.me.vertex_colors.new(name="Self Shadow")
+		else:
+			vertex_colors = self.me.vertex_colors.new(name="Self Shadow")
 
 		self.me.vertex_colors.active = vertex_colors
 

@@ -1,6 +1,16 @@
 import bpy, mathutils, colorsys
 from macouno import misc
 
+def checkColor(me):
+
+	if me.vertex_colors.active:
+		vertex_colors = me.vertex_colors.active
+	else:
+		vertex_colors = me.vertex_colors.new(name="color")
+
+	me.vertex_colors.active = vertex_colors
+	
+	return vertex_colors
 
 
 # Convert an rgb tuple (or list) to a hex string
@@ -16,45 +26,60 @@ def rgb_to_hex(rgb):
 
 # Set the base color for the entire mesh at the start
 def setBaseColor(baseColor):
+
+	me = bpy.context.active_object.data
+	vertex_colors = checkColor(me)
+
+	for p in me.polygons:
 	
-	vertex_colors = bpy.context.active_object.data.vertex_colors
-	
-	# Get the vertex colors
-	if not vertex_colors.active:
-		vertex_colors.new()
-		
-	for f in vertex_colors.active.data:
-		try:
-			f.color1 = f.color2 = f.color3 = f.color4 = baseColor
-		except:
-			f.color1 = f.color2 = f.color3 = baseColor
+		for loop in p.loop_indices:
+			v = me.loops[loop].vertex_index
+			vertex_colors.data[loop].color = baseColor
 		
 		
 		
 def applyColorToSelection(vCol):
 
-	mesh = bpy.context.active_object.data
+	me = bpy.context.active_object.data
+	vertex_colors = checkColor(me)
 	
 	# Get the faces
-	for f in mesh.faces:
-		if f.select:
+	for p in me.polygons:
+		if p.select:
 		
-			vColFace = mesh.vertex_colors.active.data[f.index]
-			
-			for r in range(len(f.vertices)):
-					
-				if not r:
-					vColFace.color1 = vCol
-				elif r == 1:
-					vColFace.color2 = vCol
-				elif r == 2:
-					vColFace.color3 = vCol
-				elif r == 3:
-					vColFace.color4 = vCol
+			for loop in p.loop_indices:
+				vertex_colors.data[loop].color = vCol
 
 
+				
+def applyColorToPolygon(pIndex, vCol):
 
+	me = bpy.context.active_object.data
+	vertex_colors = checkColor(me)
+	
+	# Get the faces
+	for p in me.polygons:
+		if p.index == pIndex:
+		
+			for loop in p.loop_indices:
+				vertex_colors.data[loop].color = vCol
+				
+				
+				
+def applyColorToVertex(vIndex, vCol):
 
+	me = bpy.context.active_object.data
+	vertex_colors = checkColor(me)
+	
+	# Get the faces
+	for p in me.polygons:
+
+		for loop in p.loop_indices:
+			if loop.vertex_index == vIndex:
+				vertex_colors.data[loop].color = vCol
+
+				
+				
 # Shift the hue of a color a certain ammount
 def HueShift(hue,shift):
 	hue += shift

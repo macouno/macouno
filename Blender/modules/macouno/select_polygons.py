@@ -4,16 +4,19 @@ from macouno import mesh_extras
 
 # Select all polygons (or deselect)
 def all(invert=False):
-	for f in bpy.context.active_object.data.polygons:
-		f.select = True
+	for p in bpy.context.active_object.data.polygons:
+		p.select = True
 	return
 
 
 
 # Select all polygons (or deselect)
 def none():
-	for f in bpy.context.active_object.data.polygons:
-		f.select = False
+	me = bpy.context.active_object.data
+	for p in me.polygons:
+		p.select = False
+	for e in me.edges:
+		e.select = False
 	return
 
 
@@ -27,33 +30,33 @@ def connected(extend=False):
 	
 		# Get a list of all vertices in selected polygons
 		vList = []
-		for f in mesh.polygons:
-			if f.select:
-				vList.extend(f.vertices)
+		for p in mesh.polygons:
+			if p.select:
+				vList.extend(p.vertices)
 				
 		if len(vList):
 			# For every deselected face, see if it shares a vert with a selected face
 			selpolygons = []
-			for f in mesh.polygons:
-				if not f.select:
-					for v in f.vertices:
+			for p in mesh.polygons:
+				if not p.select:
+					for v in p.vertices:
 						if v in vList:
-							selpolygons.append(f)
+							selpolygons.append(p)
 							break
 							
 			if len(selpolygons):
 				# Select only the connected polygons
 				if not extend:
-					for f in mesh.polygons:
-						if f in selpolygons:
-							f.select = True
+					for p in mesh.polygons:
+						if p in selpolygons:
+							p.select = True
 						else:
-							f.select = False
+							p.select = False
 							
 				# Add the connected polygons to the current selection
 				else:
-					for f in selpolygons:
-						f.select=True
+					for p in selpolygons:
+						p.select=True
 
 	return
 
@@ -113,33 +116,33 @@ def outermost(invert=False):
 	
 		# Get a list of all vertices in deselected polygons
 		vList = []
-		for f in mesh.polygons:
-			if not f.select:
-				vList.extend(f.vertices)
+		for p in mesh.polygons:
+			if not p.select:
+				vList.extend(p.vertices)
 				
 		if len(vList):
 			# For every deselected face, see if it shares a vert with a selected face
 			selpolygons = []
-			for f in mesh.polygons:
-				if  f.select:
-					for v in f.vertices:
+			for p in mesh.polygons:
+				if  p.select:
+					for v in p.vertices:
 						if v in vList:
-							selpolygons.append(f)
+							selpolygons.append(p)
 							break
 							
 			if len(selpolygons):
 				# Select only the connected polygons
 				if not invert:
-					for f in mesh.polygons:
-						if f in selpolygons:
-							f.select = True
+					for p in mesh.polygons:
+						if p in selpolygons:
+							p.select = True
 						else:
-							f.select = False
+							p.select = False
 							
 				# Add the connected polygons to the current selection
 				else:
-					for f in selpolygons:
-						f.select=False
+					for p in selpolygons:
+						p.select=False
 
 	return
 
@@ -158,9 +161,9 @@ def checkered(seed=0, extend=False):
 	unpolygons = list(mesh.polygons)
 	
 	# Put 1 face in the list of selected polygons (and remove from unselected polygons)
-	f = random.choice(unpolygons)
-	selpolygons.append(f)
-	unpolygons.remove(f)
+	p = random.choice(unpolygons)
+	selpolygons.append(p)
+	unpolygons.remove(p)
 			
 	preSel = len(selpolygons)
 			
@@ -194,16 +197,16 @@ def checkered(seed=0, extend=False):
 def addCornered(selpolygons, unpolygons):
 
 	# Loop through the unselected polygons to find out if they should be selected
-	for f in unpolygons:
+	for p in unpolygons:
 		
-		verts = f.vertices
+		verts = p.vertices
 		sel = 0
 
 		# Check against the selected polygons
-		for fs in selpolygons:
+		for ps in selpolygons:
 		
 			# Find the verts shared between these polygons
-			intersection = [v for v in verts if v in fs.vertices]
+			intersection = [v for v in verts if v in ps.vertices]
 			intLen = len(intersection)
 			
 			# If there's just the one intersection it's a corner connection
@@ -217,8 +220,8 @@ def addCornered(selpolygons, unpolygons):
 				
 		# If it's just a corner
 		if sel == 1:
-			selpolygons.append(f)
-			unpolygons.remove(f)
+			selpolygons.append(p)
+			unpolygons.remove(p)
 
 	
 	return selpolygons, unpolygons
@@ -234,9 +237,9 @@ def in_group(group,extend=False):
 	selpolygons = []
 	
 	# Find all the polygons with all verts (3 or more) in this group
-	for f in mesh.polygons:
+	for p in mesh.polygons:
 		grCnt = 0
-		for v in f.vertices:
+		for v in p.vertices:
 			vert = mesh.vertices[v]
 			try:
 				for g in vert.groups:
@@ -246,8 +249,8 @@ def in_group(group,extend=False):
 			except:
 				pass
 				
-		if grCnt == len(f.vertices):
-			selpolygons.append(f)
+		if grCnt == len(p.vertices):
+			selpolygons.append(p)
 	
 	selectpolygons(selpolygons, extend)
 	
@@ -262,26 +265,26 @@ def selectpolygons(selpolygons, extend=False):
 
 	hasSelected = mesh_extras.contains_selected_item(mesh.polygons)
 	
-	for f in mesh.polygons:
+	for p in mesh.polygons:
 	
 		# We extend and have a selection, so we just need to select extra stuff 
 		# Selecting what is already selected does no harm
 		if extend and hasSelected:
 		
-			if f in selpolygons:
-				f.select = True
+			if p in selpolygons:
+				p.select = True
 				
 		# If we already have a selection and we don't extend.. we just deselect what is selected
 		elif hasSelected:
 		
-			if not f in selpolygons:
-				f.select = False
+			if not p in selpolygons:
+				p.select = False
 		
 		# If we have no selection yet.. we only select what's in the list
 		else:
 		
-			if f in selpolygons:
-				f.select = True
+			if p in selpolygons:
+				p.select = True
 	
 	return
 
@@ -290,27 +293,30 @@ def selectpolygons(selpolygons, extend=False):
 # Select by direction
 def by_direction(direction, divergence, extend=False):
 	
-	mesh = bpy.context.active_object.data
+	me = bpy.context.active_object.data
 	direction = mathutils.Vector(direction)
 	
-	hasSelected = mesh_extras.contains_selected_item(mesh.polygons)
+	hasSelected = mesh_extras.contains_selected_item(me.polygons)
 	
 	# Make sure there's an actual directions
 	if direction.length:
 
 		# Loop through all the given polygons
-		for f in mesh.polygons:
+		for p in me.polygons:
 		
-			isSelected = f.select
+			isSelected = p.select
 			s = selectCheck(isSelected, hasSelected, extend)
 			d = deselectCheck(isSelected, hasSelected, extend)
 			
-			angle = direction.angle(f.normal)
-			
+			if p.normal.length:
+				angle = direction.angle(p.normal)
+			else:
+				angle = 0.0
+				
 			if s and angle <= divergence:
-				f.select = True
+				p.select = True
 			elif d and angle > divergence:
-				f.select = False
+				p.select = False
 				
 	return
 
@@ -327,17 +333,17 @@ def liberal(key='', extend=False):
 	hasSelected = mesh_extras.contains_selected_item(mesh.polygons)
 
 	# Loop through all the given polygons
-	for f in mesh.polygons:
+	for p in mesh.polygons:
 			
-		s = selectCheck(f.select, hasSelected, extend)
-		d = deselectCheck(f.select, hasSelected, extend)
+		s = selectCheck(p.select, hasSelected, extend)
+		d = deselectCheck(p.select, hasSelected, extend)
 		
 		# Check if the polygons match any of the directions
 		if s and lib.Choose('bool'):
-			f.select = True
+			p.select = True
 			
 		if d and not lib.Choose('bool'):
-			f.select = False
+			p.select = False
 			
 	return
 
