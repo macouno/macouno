@@ -1,4 +1,4 @@
-import bpy, mathutils
+import bpy, mathutils, math
 
 
 # Hex to rgb conversion and reverse!
@@ -15,11 +15,11 @@ def rgb_to_hex(rgb):
 	
 
 
-# Make sure the angle between the two vectors is exactly a certain one (v1, v2, angle in degrees)
+# Make sure the angle between the two vectors is exactly a certain one (v1, v2, angle in radians)
 def rotate_vector_to_vector(vec1, vec2, deg):
 	cross =vec1.cross(vec2)
-	vec = float(vec1.angle(vec2) - deg)
-	mat = mathutils.Matrix.Rotation(vec, 3, cross)
+	ang = float(vec1.angle(vec2) - deg)
+	mat = mathutils.Matrix.Rotation(-ang, 3, cross)
 	return (vec1 * mat)
 	
 

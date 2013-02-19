@@ -69,6 +69,7 @@ class Cast_Loop():
 		#selVerts = mesh_extras.get_selected_vertices()
 				
 		# Now only the outer loop
+		self.selVerts = mesh_extras.get_selected_vertices()
 		self.outVerts = []
 		self.inVerts = []
 		for p in self.me.polygons:
@@ -80,7 +81,7 @@ class Cast_Loop():
 		vCount = len(self.outVerts)
 		
 		for v in self.me.vertices:
-			if not v in self.outVerts:
+			if v.select and not v in self.outVerts:
 				self.inVerts.append(v)
 		
 		# Cast to a circle
@@ -128,6 +129,29 @@ class Cast_Loop():
 			
 			self.stepRound(v1in,v1co,(step))
 			
+			# Smooth the inner verts please (twice)
+			for x in range(0,2):
+				# First create a list with neat average positions
+				newCo = []
+				for v1 in self.inVerts:
+					
+					v1co = mathutils.Vector(v1.co)
+					v1in = v1.index
+					v1cn = 1
+					
+					for p in self.me.polygons:
+						if v1in in p.vertices:
+							for v2in in p.vertices:
+								v1co += self.me.vertices[v2in].co
+								v1cn += 1
+								
+					v1co /= v1cn
+					newCo.append(v1co)
+					
+				# Apply the list of neat average positions
+				for i, v in enumerate(self.inVerts):
+					v.co = newCo[i]
+				
 			
 
 		'''

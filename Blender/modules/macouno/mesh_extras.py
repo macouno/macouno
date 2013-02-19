@@ -235,7 +235,7 @@ def get_selected_edges(mode='selected'):
 
 	edges = bpy.context.active_object.data.edges
 
-	if mode == 'deselected':
+	if mode == 'deselected': 
 		L = [e for e in edges if not e.select]
 	else:
 		L = [e for e in edges if e.select]
