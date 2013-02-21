@@ -47,7 +47,7 @@ def Angle_Check(context, limit):
 	checkLimit = limit
 	checkFactor = 1.0 / (checkLimit * 0.25)
 
-	down = mathutils.Vector((0.0,0.0,-1.0))
+	down = mathutils.Vector((0.0,0.0,1.0))
 	ob = context.active_object
 	me = ob.data
 		

@@ -58,15 +58,7 @@ class Cast_Loop():
 		self.ob = context.active_object
 		self.me = self.ob.data
 		
-		# Go to vertex select mode
-		mode = bpy.context.tool_settings.mesh_select_mode
-		oldMode = [mode[0],mode[1],mode[2]]
-		bpy.context.tool_settings.mesh_select_mode = [True, False, False]
-		
 		bpy.ops.object.mode_set(mode='OBJECT')
-		
-		# Lets keep a list of all selected verts
-		#selVerts = mesh_extras.get_selected_vertices()
 				
 		# Now only the outer loop
 		self.selVerts = mesh_extras.get_selected_vertices()
@@ -84,50 +76,105 @@ class Cast_Loop():
 			if v.select and not v in self.outVerts:
 				self.inVerts.append(v)
 		
-		# Cast to a circle
-		if shape == 'CIR':
+
+		
+		# Find the midpoint
+		self.cent = mathutils.Vector()
+		normal = mathutils.Vector()
+		for v in self.outVerts:
+			self.cent += v.co
+			normal += v.normal
+		self.cent /= vCount
+		normal = normal.normalized()
+		
+		# make a quaternion and a matrix representing this "plane"
+		quat = normal.to_track_quat('-Z', 'Y')
+		mat = quat.to_matrix()
+		
+		# Put all the verts in the plane...
+		# Lets find out for each vert how far it is along the normal
+		midDist = 0.0
+		for v in self.outVerts:
+			relPos = v.co - self.cent
+			relDot = normal.dot(relPos)
 			
-			# Find the midpoint
-			self.cent = mathutils.Vector()
-			normal = mathutils.Vector()
-			for v in self.outVerts:
-				self.cent += v.co
-				normal += v.normal
-			self.cent /= vCount
-			normal = normal.normalized()
+			v.co += (normal * -relDot)
+			midDist += relPos.length
 			
-			# make a quaternion and a matrix representing this "plane"
-			quat = normal.to_track_quat('-Z', 'Y')
-			mat = quat.to_matrix()
+		# The medium distance from the center point
+		midDist /= vCount 
 			
-			# Put all the verts in the plane...
-			# Lets find out for each vert how far it is along the normal
-			midDist = 0.0
-			for v in self.outVerts:
-				relPos = v.co - self.cent
-				relDot = normal.dot(relPos)
+		# now lets put them all the right distance from the center
+		for v in self.outVerts:
+			relPos = v.co - self.cent
+			relPos = relPos.normalized() * midDist
+			v.co = relPos + self.cent
+			
+		# As a final step... we want them to be rotated neatly around the center...
+		step = math.radians(360) / (vCount)
+		
+		# The first one we don't move... So lets find the second!
+		v1 = self.outVerts[0]
+		v1in = v1.index
+		v1co = v1.co - self.cent
+		self.doneVerts = [v1in]
+		
+		# Place the verts equidistantly around the midpoint
+		self.oVerts = [v1]
+		self.stepRound(v1in,v1co,(step))
+		
+		if shape != 'CIR':
+			
+			# lets try putting them in a triangle
+			if shape == 'TRI':
+				cornerCount = 3.0
+			elif shape == 'SQA':
+				cornerCount = 4.0
+			c = 360.0 / cornerCount
+			a = (180.0 - c) * 0.5
+			
+			stepLen = math.ceil(len(self.outVerts) / cornerCount)
+			
+			aLine = False
+			
+			for i, v in enumerate(self.oVerts):
+			
+				stepPos = i % stepLen
+				#print('stepPos = ',stepPos)
 				
-				v.co += (normal * -relDot)
-				midDist += relPos.length
+				# Get a normalized version of the current relative position
+				line = mathutils.Vector(v.co - self.cent).normalized()
 				
-			# The medium distance from the center point
-			midDist /= vCount 
+				# Get the starting line as a reference
+				if not aLine:
+					aLine = line
+					
+				else:
 				
-			# now lets put them all the right distance from the center
-			for v in self.outVerts:
-				relPos = v.co - self.cent
-				relPos = relPos.normalized() * midDist
-				v.co = relPos + self.cent
+					# Find the angle from the current starting line
+					cAng = aLine.angle(line)
+					
+					# If the angle is bigger than a step, we make this the new start
+					if cAng > math.radians(c):
+						
+						# Make sure the angle is correct!
+						line =  misc.rotate_vector_to_vector(line, aLine, math.radians(c))
+						v.co = (line * midDist) + self.cent
+						aLine = line
+					
+					# These should all be midpoints along the line!
+					else:
+						
+						# Find the corner of the new triangle
+						b = 180 - (a+math.degrees(cAng))
+						
+						# find the distance from the midpoint
+						A = math.sin(math.radians(a)) / (math.sin(math.radians(b))/midDist)
+						
+						bLine = line * A
+						
+						v.co = bLine + self.cent
 				
-			# As a final step... we want them to be rotated neatly around the center...
-			step = math.radians(360) / (vCount)
-			
-			# The first one we don't move... So lets find the second!
-			v1in = self.outVerts[0].index
-			v1co = self.outVerts[0].co - self.cent
-			self.doneVerts = [v1in]
-			
-			self.stepRound(v1in,v1co,(step))
 			
 			# Smooth the inner verts please (twice)
 			for x in range(0,2):
@@ -151,19 +198,9 @@ class Cast_Loop():
 				# Apply the list of neat average positions
 				for i, v in enumerate(self.inVerts):
 					v.co = newCo[i]
-				
-			
-
-		'''
-		for v in self.me.vertices:
-			if v in selVerts:
-				v.select = True
-			else:
-				v.select = False
-		'''
+		
 		
 		bpy.ops.object.mode_set(mode='EDIT')
-		bpy.context.tool_settings.mesh_select_mode = oldMode
 		
 		
 		
@@ -184,6 +221,10 @@ class Cast_Loop():
 				if v2 in self.outVerts and not v2in in self.doneVerts:
 					
 					v2 = self.me.vertices[v2in]
+					
+					# Add to the list of ordered verts!
+					self.oVerts.append(v2)
+					
 					v2co = v2.co - self.cent
 					
 					v2co =  misc.rotate_vector_to_vector(v2co, v1co, step)
@@ -210,7 +251,8 @@ class Cast_Loop_init(bpy.types.Operator):
 	# The methods we use
 	shapes=(
 		('CIR', 'Circle', ''),
-		('INF', 'Infinity', ''),
+		('TRI', 'Triangle', ''),
+		('SQA', 'Square', ''),
 		)
 		
 	shape = EnumProperty(items=shapes, name='Method', description='The shape to apply', default='CIR')
