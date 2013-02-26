@@ -108,7 +108,7 @@ class Entoform():
 	# Go grow something!
 	def executeDNA(self, string, baseGroups, baseWeight):
 		
-		
+		# Stop if the limit is reached! (mostly for debugging)
 		if self.steplimit and string['number'] >= self.steplimit:
 			print('Reached steplimit',self.steplimit,'STOPPING')
 			return
@@ -121,7 +121,7 @@ class Entoform():
 			return	
 		'''
 		# Redraw hack to see what is happening
-		# bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
+		#bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
 		
 		newGroups, formmatrix, growmatrices = self.makeAffectedGroups(string, baseGroups)
 		groupLen = len(newGroups)\
@@ -437,6 +437,9 @@ class Entoform():
 				'type': 'bump',
 				'bumptype': 'BUM',
 				'bumpscale': 0.5, 
+				'loop_shape': 'CIR',
+				'loops_scale': 1.0, 
+				'loop_falloff': 'STR',
 				'vertexcolor': (0.0,0.0,0.0),
 				'jointcolor': (1.0,1.0,1.0),
 				'colorstyle': 'hard',
@@ -449,12 +452,15 @@ class Entoform():
 			action = {
 				'name':style,
 				'type': 'bump',
-				'bumptype': self.choose('select','bumptypes','bump type'),
-				'bumpscale': self.choose('float','bumpscale','bump factor'),
-				'vertexcolor': self.choose('select','palette','vertex color'),
-				'jointcolor': self.choose('select','palette','joint color'),
-				'colorstyle': self.choose('select','colorstyles','color style'),
-				'crease': self.choose('float', 'crease', 'crease'),
+				'bumptype': 					self.choose('select','bumptypes','bump type'),
+				'bumpscale': 					self.choose('float','bumpscale','bump factor'),
+				'loop_shape':				self.choose('select', 'loopshapes', 'loop shape'),
+				'loop_scale':					self.choose('float', 'loopscale', 'loop scale'),
+				'loop_falloff':					self.choose('select', 'loopfalloffs', 'loop falloff'),
+				'vertexcolor': 					self.choose('select','palette','vertex color'),
+				'jointcolor': 						self.choose('select','palette','joint color'),
+				'colorstyle': 					self.choose('select','colorstyles','color style'),
+				'crease': 							self.choose('float', 'crease', 'crease'),
 				'sub': False,
 				}
 		
@@ -475,6 +481,9 @@ class Entoform():
 				'rotation_falloff':				self.choose('select', 'falloffs', 'rotation falloff'),
 				'scale':								self.choose('float', 'scale', 'scale'),
 				'scale_falloff':					self.choose('select', 'falloffs', 'scale falloff'),
+				'loop_shape':				self.choose('select', 'loopshapes', 'loop shape'),
+				'loop_scale':					self.choose('float', 'loopscale', 'loop scale'),
+				'loop_falloff':					self.choose('select', 'loopfalloffs', 'loop falloff'),
 				'vertexcolor':					self.choose('select','palette', 'vertex color'),
 				'jointcolor': 						self.choose('select','palette','joint color'),
 				'colorstyle': 					self.choose('select','colorstyles','color style'),
@@ -1346,6 +1355,7 @@ class Entoform():
 			'scale': {'min': 0.4, 'max': 0.7},
 			'crease': {'min': 0.4, 'max': 0.7},
 			'bumpscale': {'min': 0.4, 'max': 0.7},
+			'loopscale': {'min': 0.3, 'max': 1.3},
 			'rotation': {'min': math.radians(-60.0), 'max': math.radians(60.0)},
 			'divergence': {'min': math.radians(45),'max': math.radians(75)},
 			'limit': {'min': 4, 'max': 6},
@@ -1356,6 +1366,7 @@ class Entoform():
 			'scale': {'min': -0.3, 'max': 0.3},
 			'crease': {'min': -0.3, 'max': 0.3},
 			'bumpscale': {'min': -0.35, 'max': 0.3},
+			'loopscale': {'min': -0.2, 'max': 0.2},
 			'rotation': {'min': math.radians(-60.0), 'max': math.radians(60.0)},
 			'divergence': {'min': math.radians(-15),'max': math.radians(15)},
 			'limit': {'min': -2, 'max': 2},
@@ -1364,6 +1375,9 @@ class Entoform():
 		self.options['falloffs'] = {'a': 'LIN', 'b': 'INC', 'c': 'DEC', 'd': 'SWO', 'e': 'SPI', 'f': 'BUM', 'g': 'SWE'}
 		
 		self.options['bumptypes'] = {'a': 'BUM', 'b': 'SPI', 'c': 'DIM', 'd': 'PIM'}
+		
+		self.options['loopshapes'] = {'a': 'CIR', 'b': 'TRI', 'c': 'SQA'}
+		self.options['loopfalloffs'] = {'a': 'STR', 'b': 'BUM', 'c': 'SPI', 'd': 'SWE'}
 		
 		self.options['selectiontypes'] = {'a': 'direction', 'b': 'liberal', 'c': 'joint', 'd': 'all', 'e': 'checkered', 'f': 'loops'} # tip = disabled
 		self.options['selectioneyes'] = {'a': 'direction', 'b': 'liberal', 'c': 'joint', 'd': 'all', 'e': 'checkered'}
@@ -1602,7 +1616,7 @@ class Entoform_init(bpy.types.Operator):
 	bl_options = {'REGISTER', 'UNDO'}
 	
 	d='Selina'
-	limit = 1
+	limit = 100
 
 	dnaString = StringProperty(name="DNA", description="DNA string to define your shape", default=d, maxlen=100)
 	

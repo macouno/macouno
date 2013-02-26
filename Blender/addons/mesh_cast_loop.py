@@ -185,19 +185,23 @@ class Cast_Loop():
 					# These should all be midpoints along the line!
 					else:
 					
-						# Find out how far we are from the start as a factor (fraction of one?)
-						angFac = cAng / math.radians(c)
-						self.newX = angFac
+						# Only if we have to scale and the line isn't straight!
+						if self.scale != 1.0 and self.scale_falloff != 'STR':
 						
-						# Create a nice curve object to represent the falloff
-						
-						curve.update(1.0, 0.0, self.vec, self.currentX, self.newX)
-						
-						fac = abs(curve.currentVal)
-						
-						self.factor *= fac
-						
-						self.currentX = self.newX
+							# Find out how far we are from the start as a factor (fraction of one?)
+							angFac = cAng / math.radians(c)
+							self.newX = angFac
+							
+							# Create a nice curve object to represent the falloff
+							
+							curve.update(1.0, 0.0, self.vec, self.currentX, self.newX)
+							
+							fac = abs(curve.currentVal)
+							
+							self.factor *= fac
+							
+							self.currentX = self.newX
+							
 						
 						# Find the corner of the new triangle
 						b = 180 - (a+math.degrees(cAng))
@@ -291,19 +295,20 @@ class Cast_Loop_init(bpy.types.Operator):
 		('SQA', 'Square', ''),
 		)
 		
-	shape = EnumProperty(items=shapes, name='Method', description='The shape to apply', default='TRI')
+	type = EnumProperty(items=shapes, name='Method', description='The shape to apply', default='TRI')
 	
 	# Scale
 	scale = FloatProperty(name='Scale', description='Translation in Blender units', default=1.0, min=0.01, max=10.0, soft_min=0.01, soft_max=100.0, step=10, precision=2)
 	
 	# The falloffs we use
 	falloffs=(
+		('STR', 'Straight',''),
 		('SPI', 'Spike',''),
 		('BUM', 'Bump',''),
 		('SWE', 'Sweep',''),
 		)
 		
-	scale_falloff = EnumProperty(items=falloffs, name='Falloff', description='The falloff of the scale', default='SPI')
+	scale_falloff = EnumProperty(items=falloffs, name='Falloff', description='The falloff of the scale', default='STR')
 	
 	@classmethod
 	def poll(cls, context):
