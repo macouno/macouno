@@ -28,7 +28,7 @@ bl_info = {
 	"blender": (2, 5, 6),
 	"api": 31847,
 	"location": "View3D > Specials > Cast Loop",
-	"description": "Extrude and translate/rotate/scale multiple times",
+	"description": "Cast the outside of your selection to a specific shape",
 	"warning": "",
 	"wiki_url": "",
 	"tracker_url": "",
@@ -47,16 +47,18 @@ Additional links:
 
 import bpy, mathutils, math
 from bpy.props import EnumProperty, BoolProperty, FloatProperty
-from macouno import select_polygons, mesh_extras, misc
+from macouno import select_polygons, mesh_extras, misc, falloff_curve
 
 # Bump stuff!
 class Cast_Loop():
 
 	# Initialise the class
-	def __init__(self, context, shape):
+	def __init__(self, context, shape,scale,scale_falloff):
 	
 		self.ob = context.active_object
 		self.me = self.ob.data
+		self.scale = scale
+		self.scale_falloff = scale_falloff
 		
 		bpy.ops.object.mode_set(mode='OBJECT')
 				
@@ -105,16 +107,23 @@ class Cast_Loop():
 		midDist /= vCount 
 			
 		# now lets put them all the right distance from the center
-		for v in self.outVerts:
+		top = False
+		topVert = False
+		for i,v in enumerate(self.outVerts):
 			relPos = v.co - self.cent
 			relPos = relPos.normalized() * midDist
 			v.co = relPos + self.cent
+			
+			# Find the top vert for nice alignment of the shape (start the steploop here)
+			if top is False or v.co[2] > top:
+				top = v.co[2]
+				topVert = i
 			
 		# As a final step... we want them to be rotated neatly around the center...
 		step = math.radians(360) / (vCount)
 		
 		# The first one we don't move... So lets find the second!
-		v1 = self.outVerts[0]
+		v1 = self.outVerts[topVert]
 		v1in = v1.index
 		v1co = v1.co - self.cent
 		self.doneVerts = [v1in]
@@ -137,10 +146,16 @@ class Cast_Loop():
 			
 			aLine = False
 			
+			
+			self.currentX = 0.0
+			self.vec = self.scale
+			self.factor = 1.0
+			curve = falloff_curve.curve(self.scale_falloff, 'mult')
+			
 			for i, v in enumerate(self.oVerts):
 			
 				stepPos = i % stepLen
-				#print('stepPos = ',stepPos)
+
 				
 				# Get a normalized version of the current relative position
 				line = mathutils.Vector(v.co - self.cent).normalized()
@@ -148,6 +163,8 @@ class Cast_Loop():
 				# Get the starting line as a reference
 				if not aLine:
 					aLine = line
+					self.currentX = 0.0
+					self.factor = 1.0
 					
 				else:
 				
@@ -161,9 +178,26 @@ class Cast_Loop():
 						line =  misc.rotate_vector_to_vector(line, aLine, math.radians(c))
 						v.co = (line * midDist) + self.cent
 						aLine = line
+						
+						self.currentX = 0.0
+						self.factor = 1.0
 					
 					# These should all be midpoints along the line!
 					else:
+					
+						# Find out how far we are from the start as a factor (fraction of one?)
+						angFac = cAng / math.radians(c)
+						self.newX = angFac
+						
+						# Create a nice curve object to represent the falloff
+						
+						curve.update(1.0, 0.0, self.vec, self.currentX, self.newX)
+						
+						fac = abs(curve.currentVal)
+						
+						self.factor *= fac
+						
+						self.currentX = self.newX
 						
 						# Find the corner of the new triangle
 						b = 180 - (a+math.degrees(cAng))
@@ -173,11 +207,13 @@ class Cast_Loop():
 						
 						bLine = line * A
 						
+						bLine *= self.factor
+						
 						v.co = bLine + self.cent
 				
 			
 			# Smooth the inner verts please (twice)
-			for x in range(0,2):
+			for x in range(0,5):
 				# First create a list with neat average positions
 				newCo = []
 				for v1 in self.inVerts:
@@ -255,7 +291,19 @@ class Cast_Loop_init(bpy.types.Operator):
 		('SQA', 'Square', ''),
 		)
 		
-	shape = EnumProperty(items=shapes, name='Method', description='The shape to apply', default='CIR')
+	shape = EnumProperty(items=shapes, name='Method', description='The shape to apply', default='TRI')
+	
+	# Scale
+	scale = FloatProperty(name='Scale', description='Translation in Blender units', default=1.0, min=0.01, max=10.0, soft_min=0.01, soft_max=100.0, step=10, precision=2)
+	
+	# The falloffs we use
+	falloffs=(
+		('SPI', 'Spike',''),
+		('BUM', 'Bump',''),
+		('SWE', 'Sweep',''),
+		)
+		
+	scale_falloff = EnumProperty(items=falloffs, name='Falloff', description='The falloff of the scale', default='SPI')
 	
 	@classmethod
 	def poll(cls, context):
@@ -263,7 +311,7 @@ class Cast_Loop_init(bpy.types.Operator):
 		return (obj and obj.type == 'MESH')
 
 	def execute(self, context):
-		Cast = Cast_Loop(context, self.shape) 
+		Cast = Cast_Loop(context, self.shape,self.scale,self.scale_falloff) 
 		return {'FINISHED'}
 
 		
