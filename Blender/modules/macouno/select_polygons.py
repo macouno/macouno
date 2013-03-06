@@ -32,9 +32,9 @@ def connected(extend=False):
 	
 		# Get a list of all vertices in selected polygons
 		vList = []
-		for p in mesh.polygons:
-			if p.select:
-				vList.extend(p.vertices)
+		for v in mesh.vertices:
+			if v.select:
+				vList.append(v.index)
 				
 		if len(vList):
 			# For every deselected face, see if it shares a vert with a selected face
@@ -290,6 +290,17 @@ def selectpolygons(selpolygons, extend=False):
 	
 	return
 
+	
+# Select patches
+def patches(size, extend=False):
+
+	me = bpy.context.active_object.data
+	
+	patches = []
+	
+	hasSelected = mesh_extras.contains_selected_item(me.polygons)
+	
+	return
 
 
 # Select by direction

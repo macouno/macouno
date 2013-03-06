@@ -295,7 +295,7 @@ class Cast_Loop_init(bpy.types.Operator):
 		('SQA', 'Square', ''),
 		)
 		
-	type = EnumProperty(items=shapes, name='Method', description='The shape to apply', default='TRI')
+	shape = EnumProperty(items=shapes, name='Method', description='The shape to apply', default='TRI')
 	
 	# Scale
 	scale = FloatProperty(name='Scale', description='Translation in Blender units', default=1.0, min=0.01, max=10.0, soft_min=0.01, soft_max=100.0, step=10, precision=2)

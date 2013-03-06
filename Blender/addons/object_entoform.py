@@ -124,7 +124,10 @@ class Entoform():
 		#bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
 		
 		newGroups, formmatrix, growmatrices = self.makeAffectedGroups(string, baseGroups)
-		groupLen = len(newGroups)\
+		groupLen = len(newGroups)
+		
+		# Temporary halt!
+		#return
 		
 		pad = str(' ').rjust(string['level'], ' ')
 		
@@ -263,6 +266,7 @@ class Entoform():
 			
 			print("\n - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n")
 		
+		
 		# Make the head
 		print("\n - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n")
 		print((self.stringCount+1),"Making nr",(self.stringCount+1),"DNA string for the head\n")
@@ -276,7 +280,7 @@ class Entoform():
 		
 		self.dna['strings'].append(string)
 		self.stringCount += 1
-		
+		'''
 		
 		# Make eyes on the head!
 		print("\n - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n")
@@ -311,7 +315,7 @@ class Entoform():
 		
 		self.dna['strings'][0]['strings'].append(string)
 		self.stringCount += 1
-
+		
 
 		# Mirror the action in case it's left or right
 		if selection['type'] == 'direction' and (selection['vector'] == mathutils.Vector((1.0,0.0,0.0)) or selection['vector'] == mathutils.Vector((-1.0,0.0,0.0))):
@@ -320,7 +324,7 @@ class Entoform():
 			self.dna['strings'][0]['strings'].append(string)
 			
 		
-		
+		'''
 		# Make the body
 		print("\n - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n")
 		print((self.stringCount+1),"Making nr",(self.stringCount+1),"DNA string for the body\n")
@@ -336,7 +340,7 @@ class Entoform():
 		self.stringCount += 1
 		
 		
-		
+		'''
 		# Make a tail!
 		print("\n - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n")
 		print((self.stringCount+1),"Making nr",(self.stringCount+1),"DNA string for the tail\n")
@@ -348,7 +352,7 @@ class Entoform():
 		
 		self.dna['strings'][1]['strings'].append(string)
 		self.stringCount += 1
-		
+		'''
 		
 		
 		# Make some legs (well hopefully)
@@ -380,11 +384,11 @@ class Entoform():
 		#action['translation'] *= 2
 		
 		string = {'name':'lower legs', 'action':action, 'selection':selection, 'strings':[], 'level':3,'number':self.stringCount}
-		self.dna['strings'][1]['strings'][1]['strings'].append(string)
+		self.dna['strings'][1]['strings'][len(self.dna['strings'][1]['strings'])-1]['strings'].append(string)
 		self.stringCount += 1
 		
 		string = self.mirrorDNA(action, selection, 3)
-		self.dna['strings'][1]['strings'][2]['strings'].append(string)
+		self.dna['strings'][1]['strings'][1]['strings'].append(string)
 		
 		
 		
@@ -1616,7 +1620,7 @@ class Entoform_init(bpy.types.Operator):
 	bl_options = {'REGISTER', 'UNDO'}
 	
 	d='Selina'
-	limit = 100
+	limit = 1
 
 	dnaString = StringProperty(name="DNA", description="DNA string to define your shape", default=d, maxlen=100)
 	
