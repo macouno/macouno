@@ -130,6 +130,8 @@ class Cast_Loop():
 		
 		# Place the verts equidistantly around the midpoint
 		self.oVerts = [v1]
+		self.oRig = v1co
+		self.dVec = False
 		self.stepRound(v1in,v1co,(step))
 		
 		if shape != 'CIR':
@@ -267,11 +269,24 @@ class Cast_Loop():
 					
 					v2co = v2.co - self.cent
 					
-					v2co =  misc.rotate_vector_to_vector(v2co, v1co, step)
+					if self.dVec is False:
+						self.dVec = v2co - v1co
+						
+					# If the dot is negative... we're moving back along the circle and we invert the step (move the vert toward the previous one in stead of away from it)
+					dot = v2co.dot(self.dVec)
 					
+					#pre = v2co.angle(self.oRig)
+					if dot < 0.0:
+						v2co =  misc.rotate_vector_to_vector(v2co, v1co, -step)
+					else:
+						v2co =  misc.rotate_vector_to_vector(v2co, v1co, step)
+					
+					#post = v2co.angle(self.oRig)
+					#print('  dot',round(dot,2),'pre',round(math.degrees(pre)),'post',round(math.degrees(post)),'step',round(math.degrees(step)))
 					v2.co = v2co + self.cent
 					
 					self.doneVerts.append(v2in)
+					self.dVec = v2co - v1co
 					
 					self.stepRound(v2in,v2co,step)
 					return
@@ -295,7 +310,7 @@ class Cast_Loop_init(bpy.types.Operator):
 		('SQA', 'Square', ''),
 		)
 		
-	shape = EnumProperty(items=shapes, name='Method', description='The shape to apply', default='TRI')
+	shape = EnumProperty(items=shapes, name='Method', description='The shape to apply', default='CIR')
 	
 	# Scale
 	scale = FloatProperty(name='Scale', description='Translation in Blender units', default=1.0, min=0.01, max=10.0, soft_min=0.01, soft_max=100.0, step=10, precision=2)
