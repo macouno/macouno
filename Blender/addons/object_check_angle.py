@@ -40,14 +40,17 @@ Launch from Object - Check Angle
 """
 
 import bpy, mathutils, math
-from bpy.props import FloatProperty
+from bpy.props import FloatProperty, EnumProperty
 
-def Angle_Check(context, limit):
+def Angle_Check(context, limit, dir):
 
 	checkLimit = limit
 	checkFactor = 1.0 / (checkLimit * 0.25)
 
-	down = mathutils.Vector((0.0,0.0,1.0))
+	if dir == 'UP':
+		down = mathutils.Vector((0.0,0.0,1.0))
+	else:
+		down = mathutils.Vector((0.0,0.0,-1.0))
 	ob = context.active_object
 	me = ob.data
 		
@@ -107,6 +110,14 @@ class Angle_Check_init(bpy.types.Operator):
 	
 	# Scale
 	limit = FloatProperty(name='Limit', description='Limit in degrees', default=40.0, min=0.0, max=180.0, soft_min=0.0, soft_max=360.0, step=10, precision=1)
+	
+	# The falloffs we use
+	dirs=(
+		('UP', 'Up',''),
+		('DO', 'Down',''),
+		)
+		
+	dir = EnumProperty(items=dirs, name='Direction', description='The direction to look in', default='DO')
 
 	@classmethod
 	def poll(cls, context):
@@ -114,7 +125,7 @@ class Angle_Check_init(bpy.types.Operator):
 		return (obj and obj.type == 'MESH')
 
 	def execute(self, context):
-		Angle_Check(context, self.limit) 
+		Angle_Check(context, self.limit, self.dir) 
 		return {'FINISHED'}
 
 
