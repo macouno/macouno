@@ -265,7 +265,150 @@ def contains_selected_item(items):
 				
 	return False
 	
+	
+	
+# Weights for a list of verts relative to the centre of the selection
+def makeWeights(verts):
+	
+	cen = mathutils.Vector()
 
+	for v in verts:
+		cen += v.co
+	cen *= (1.0/len(verts))
+	
+	# Find the minimum and maximum distance from the centre
+	min = 0.0
+	max = 0.0
+	distances = []
+	for i, v in enumerate(verts):
+		dist = (v.co - cen).length
+		distances.append(dist)
+		if not i or dist < min:
+			min = dist
+		if not i or dist > max:
+			max = dist
+			
+	max = max - min
+	
+	if max > 0.0:
+		factor = (1.0 / max)
+	else:
+		factor = 1.0
+	
+	# Make the weights
+	weights = []
+	for i, v in enumerate(verts):
+		weight = (max - (distances[i] - min)) * factor
+		weights.append(weight)
+		
+	return weights
+	
+	
+	
+# Function to find a corner in a list of polygons
+# Finds a polygon with a vert that isn't shared
+def get_corner_polygon(polygons):
+
+	verts = []
+	
+	for p in polygons:
+		for v in p.vertices:
+			verts.append(v)
+				
+	for p in polygons:
+		for v in p.vertices:
+			if verts.count(v) == 1:
+				return p
+			
+	return False
+
+
+	
+# Create vertex groups containing this selection (in different groupings)
+# Written for use with the Entoforms addon
+def group_selection(area='area'):
+
+	ob = bpy.context.active_object
+	polygons = get_selected_polygons()
+	verts = get_selected_vertices()
+	
+	# Make arrays for new groups and their matrices
+	newGroups = []
+	newMatrices = []
+	
+	# There really should be selected polygons
+	if len(polygons):
+	
+		# There really should be verts
+		if len(verts):
+		
+			weights = makeWeights(verts)
+		
+			# Add the entire selection in one
+			if area == 'area':
+		
+				newGroup = ob.vertex_groups.new('area')
+				newGroups.append(newGroup)
+				
+				for v in verts:
+						newGroup.add([v.index], 1.0, 'REPLACE')
+						
+			# Create a chunky selection (select a poly then select adjacent polys as well	
+			elif area == 'chunks':
+				
+				selPolys = [p for p in polygons]
+				
+				while len(selPolys):
+				
+					chunkV = []
+					chunkP = []
+					
+					# Get a poly at the corner.... or get a loose one if you can't... but you should always find one...
+					p1 = get_corner_polygon(selPolys)
+					if not p1:
+						p1 = selPolys[0]
+						
+					chunkP.append(p1)
+					for v in p1.vertices:
+						chunkV.append(v)
+					
+					for p2 in selPolys:
+						
+						if not p1 == p2:
+							int = set(p1.vertices).intersection( set(p2.vertices) )
+							if len(int):
+								for v in p2.vertices:
+									if not v in chunkV:
+										chunkV.append(v)
+								chunkP.append(p2)
+					
+					newGroup = ob.vertex_groups.new('chunk')
+					newGroups.append(newGroup)					
+					for v in chunkV:
+						newGroup.add([v], 1.0, 'REPLACE')
+								 
+					for p in chunkP:
+						selPolys.remove(p)			
+
+				
+				
+						
+			# Add every polygon
+			elif area == 'polygons':
+			
+				for i, p in enumerate(polygons):
+					#newMatrices.append(mesh_extras.get_selection_matrix([p]))
+					newGroup = ob.vertex_groups.new('polygon')
+					newGroups.append(newGroup)
+					
+					vertList = p.vertices
+					
+					for i,v in enumerate(verts):
+						ind = v.index
+						if ind in vertList:
+							newGroup.add([v.index], weights[i], 'REPLACE')
+	
+	return newGroups, newMatrices
 
 
 

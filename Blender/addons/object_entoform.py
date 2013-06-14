@@ -1028,11 +1028,20 @@ class Entoform():
 					
 					for v in verts:
 							newGroup.add([v.index], 1.0, 'REPLACE')
+							
+							
+				elif selection['area'] == 'chunks':
+				
+					if len(polygons):
+					
+						selPolys = [p for p in polygons]
 					
 				# If we have it per face, we need sepparate weights and groups
 				elif selection['area'] == 'polygons':
 				
 					if len(polygons):
+					
+						
 					
 						for i, p in enumerate(polygons):
 							growmatrices.append(mesh_extras.get_selection_matrix([p]))
