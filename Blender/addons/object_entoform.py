@@ -211,6 +211,11 @@ class Entoform():
 						
 						bpy.ops.object.mode_set(mode='EDIT')
 						
+						#return
+						
+						# Cast the selection to the correct shape please
+						bpy.ops.mesh.cast_loop(shape=a['loop_shape'], scale=1, scale_falloff='STR')
+						
 						if a['type'] == 'bump':
 						
 							bpy.ops.mesh.bump(
@@ -670,7 +675,7 @@ class Entoform():
 				
 			elif type == 'legs':
 				selection['vector'] = mathutils.Vector((1.0,0.0,0.0))
-				selection['area'] = 'polygons'
+				selection['area'] = 'chunks'
 				
 			elif type == 'lowerlegs':
 				selection['vector'] = self.choose('select', 'local_directions', 'selection direction')
@@ -996,67 +1001,21 @@ class Entoform():
 	
 		selection = string['selection']
 		self.doubleCheckSelection(selection)
-	
+		
 		polygons = mesh_extras.get_selected_polygons()
 		
-		formmatrix = mathutils.Matrix()
-		growmatrices = []
+		addGroups, addMatrices = mesh_extras.group_selection(area = selection['area'], name=string['name'])
 		
-		if len(polygons):
+		for g in addGroups:
+			newGroups.append(g)
+			self.newGroups.append(g)
+			
+		for m in addMatrices:
+			growmatrices.append(m)
+			
 		
-			verts = []
-			inds = []
-			for p in polygons:
-				for v in p.vertices:
-					if not v in inds:
-						inds.append(v)
-						verts.append(self.me.vertices[v])
-
-			# NOW WE GO MAKE THE GROUPS
-			if len(verts):
-
-				weights = self.makeWeights(verts)
-				
-				formmatrix = mesh_extras.get_selection_matrix(polygons)
-				
-				# If we do this per area, we want the entire area to be part of one group
-				if selection['area'] == 'area':
-					growmatrices.append(formmatrix)
-					newGroup = self.ob.vertex_groups.new(string['name']+'.'+selection['type'])
-					newGroups.append(newGroup)
-					self.newGroups.append(newGroup)
-					
-					for v in verts:
-							newGroup.add([v.index], 1.0, 'REPLACE')
-							
-							
-				elif selection['area'] == 'chunks':
-				
-					if len(polygons):
-					
-						selPolys = [p for p in polygons]
-					
-				# If we have it per face, we need sepparate weights and groups
-				elif selection['area'] == 'polygons':
-				
-					if len(polygons):
-					
-						
-					
-						for i, p in enumerate(polygons):
-							growmatrices.append(mesh_extras.get_selection_matrix([p]))
-							newGroup = self.ob.vertex_groups.new(string['name']+'.'+selection['type']+'.'+misc.nr4(i))
-							newGroups.append(newGroup)
-							self.newGroups.append(newGroup)
-							
-							vertList = p.vertices
-							
-							for i,v in enumerate(verts):
-								ind = v.index
-								if ind in vertList:
-									newGroup.add([v.index], weights[i], 'REPLACE')
-
-								
+		formmatrix = mesh_extras.get_selection_matrix(polygons)
+		
 		return newGroups, formmatrix, growmatrices
 		
 		
@@ -1404,7 +1363,7 @@ class Entoform():
 			'f': mathutils.Vector((0.0,0.0,-1.0)),		#left
 			}
 			
-		self.options['areatypes'] = {'a': 'area','b': 'polygons'}
+		self.options['areatypes'] = {'a': 'area','b': 'polygons','c':'chunks'}
 		self.options['frequencies'] = {'a': 1, 'b': 2}
 		self.options['colorstyles'] = {'a': 'hard','b': 'soft'}
 		
@@ -1629,7 +1588,7 @@ class Entoform_init(bpy.types.Operator):
 	bl_options = {'REGISTER', 'UNDO'}
 	
 	d='Selina'
-	limit = 1
+	limit = 0
 
 	dnaString = StringProperty(name="DNA", description="DNA string to define your shape", default=d, maxlen=100)
 	
@@ -1639,9 +1598,9 @@ class Entoform_init(bpy.types.Operator):
 	
 	keepgroups = BoolProperty(name='Keep groups', description='Do not remove the added vertex groups', default=True)
 	
-	finish = BoolProperty(name='Finish', description='Do some final touches', default=False)
+	finish = BoolProperty(name='Finish', description='Do some final touches', default=True)
 	
-	run = BoolProperty(name='Execute', description='Go and actually do this', default=False)
+	run = BoolProperty(name='Execute', description='Go and actually do this', default=True)
 
 	@classmethod
 	def poll(cls, context):

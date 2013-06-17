@@ -66,12 +66,19 @@ class Cast_Loop():
 		self.selVerts = mesh_extras.get_selected_vertices()
 		self.outVerts = []
 		self.inVerts = []
+		normal = mathutils.Vector()
+		
 		for p in self.me.polygons:
 			if not p.select:
 				for v in p.vertices:
 					vert = self.me.vertices[v]
 					if vert.select and not vert in self.outVerts:
 						self.outVerts.append(vert)
+			else:
+				for v in p.vertices:
+					normal += self.me.vertices[v].normal
+					
+		normal = normal.normalized()
 		vCount = len(self.outVerts)
 		
 		for v in self.me.vertices:
@@ -82,12 +89,10 @@ class Cast_Loop():
 		
 		# Find the midpoint
 		self.cent = mathutils.Vector()
-		normal = mathutils.Vector()
 		for v in self.outVerts:
 			self.cent += v.co
-			normal += v.normal
+			#normal += v.normal
 		self.cent /= vCount
-		normal = normal.normalized()
 		
 		# make a quaternion and a matrix representing this "plane"
 		quat = normal.to_track_quat('-Z', 'Y')
@@ -102,7 +107,8 @@ class Cast_Loop():
 			
 			v.co += (normal * -relDot)
 			midDist += relPos.length
-			
+		#return
+		
 		# The medium distance from the center point
 		midDist /= vCount 
 			
@@ -118,7 +124,8 @@ class Cast_Loop():
 			if top is False or v.co[2] > top:
 				top = v.co[2]
 				topVert = i
-			
+		#return
+		
 		# As a final step... we want them to be rotated neatly around the center...
 		step = math.radians(360) / (vCount)
 		

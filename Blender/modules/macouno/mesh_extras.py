@@ -34,10 +34,15 @@ def get_selection_matrix(polygons=False):
 		quat = zVec.to_track_quat('-Z', 'Y')
 		tMat = quat.to_matrix()
 		yVec = tMat[1]
-		yVec = yVec.normalized()
-	else:
-		yVec = yVec.normalized()
+	yVec = yVec.normalized()
+		
+	if not zVec.length:
+		quat = yVec.to_track_quat('-Z', 'Y')
+		tMat = quat.to_matrix()
+		zVec = tMat[1]
 	zVec = zVec.normalized()
+	
+	print('check',yVec.length,zVec.length)
 	
 	# Rotate yVec so it's 90 degrees to zVec
 	cross =yVec.cross(zVec)
@@ -326,15 +331,20 @@ def get_corner_polygon(polygons):
 	
 # Create vertex groups containing this selection (in different groupings)
 # Written for use with the Entoforms addon
-def group_selection(area='area'):
+def group_selection(area='area', name='group'):
 
 	ob = bpy.context.active_object
 	polygons = get_selected_polygons()
-	verts = get_selected_vertices()
+	verts = []
+	for p in polygons:
+		for v in p.vertices:
+			if not v in verts:
+				verts.append(ob.data.vertices[v])
 	
 	# Make arrays for new groups and their matrices
 	newGroups = []
 	newMatrices = []
+
 	
 	# There really should be selected polygons
 	if len(polygons):
@@ -342,16 +352,19 @@ def group_selection(area='area'):
 		# There really should be verts
 		if len(verts):
 		
-			weights = makeWeights(verts)
-		
 			# Add the entire selection in one
 			if area == 'area':
 		
-				newGroup = ob.vertex_groups.new('area')
+				#make a new group called 'area'
+				newGroup = ob.vertex_groups.new(name)
 				newGroups.append(newGroup)
+				
+				newMatrices.append(get_selection_matrix(polygons))
 				
 				for v in verts:
 						newGroup.add([v.index], 1.0, 'REPLACE')
+						
+						
 						
 			# Create a chunky selection (select a poly then select adjacent polys as well	
 			elif area == 'chunks':
@@ -382,7 +395,9 @@ def group_selection(area='area'):
 										chunkV.append(v)
 								chunkP.append(p2)
 					
-					newGroup = ob.vertex_groups.new('chunk')
+					newMatrices.append(get_selection_matrix(chunkP))
+					
+					newGroup = ob.vertex_groups.new(name)
 					newGroups.append(newGroup)					
 					for v in chunkV:
 						newGroup.add([v], 1.0, 'REPLACE')
@@ -390,15 +405,15 @@ def group_selection(area='area'):
 					for p in chunkP:
 						selPolys.remove(p)			
 
-				
-				
 						
 			# Add every polygon
 			elif area == 'polygons':
 			
+				weights = makeWeights(verts)
+			
 				for i, p in enumerate(polygons):
-					#newMatrices.append(mesh_extras.get_selection_matrix([p]))
-					newGroup = ob.vertex_groups.new('polygon')
+					newMatrices.append(get_selection_matrix([p]))
+					newGroup = ob.vertex_groups.new(name)
 					newGroups.append(newGroup)
 					
 					vertList = p.vertices
