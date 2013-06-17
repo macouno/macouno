@@ -8,25 +8,63 @@ def get_selection_matrix(polygons=False):
 	
 	if not polygons:
 		polygons = get_selected_polygons()
+		
+	# Only make a factor if there's more than one poly...!
+	pLen = len(polygons)
+	if pLen > 1:
+		centre = get_selection_centre(polygons)
+		
+		# now lets find the points closest and furthest from the centre
+		closest = False
+		furthest = False
+
+		for p in polygons:
+		
+			pCent = get_polygon_centre(p)
+			
+			pDist = pCent - centre
+			pDist = pDist.length
+			
+			#print('dist',pDist)
+			
+			if furthest is False or pDist > furthest:
+				furthest = pDist
+			if closest is False or pDist < closest:
+				closest = pDist
+				
+		#print('		close far',closest,furthest,centre)
 	
 	yVec = mathutils.Vector()
 	zVec = mathutils.Vector()
 	
 	# Ok so we have a basic matrix, but lets base it more on the mesh!
 	for p in polygons:
+	
+		if pLen > 1:
+			# now we find out how close this poly is to the selection centre
+			pCent = get_polygon_centre(p)
+			pDist = pCent - centre
+			pDist = pDist.length
+			
+			# Then we create a factor making polys closer to the centre of the selection bigger
+			pDist -= closest
+			pFact = (2.0 / (furthest - closest)) * pDist
+		else:
+			pFact = 1.0
+		
 			
 		v1 = me.vertices[p.vertices[0]].co
 		v2 = me.vertices[p.vertices[1]].co
 		edge = v2-v1
 		
-		yVec += edge
+		yVec += (edge.normalized() * pFact)
 		
 		if len(p.vertices) == 4:
 			v1 = me.vertices[p.vertices[2]].co
 			v2 = me.vertices[p.vertices[3]].co
 			edge = v1-v2
 			
-			yVec += edge
+			yVec += (edge.normalized() * pFact)
 		
 		zVec += mathutils.Vector(p.normal)
 					
@@ -42,7 +80,7 @@ def get_selection_matrix(polygons=False):
 		zVec = tMat[1]
 	zVec = zVec.normalized()
 	
-	print('check',yVec.length,zVec.length)
+	#print('check',yVec.length,zVec.length)
 	
 	# Rotate yVec so it's 90 degrees to zVec
 	cross =yVec.cross(zVec)
@@ -59,7 +97,44 @@ def get_selection_matrix(polygons=False):
 	return nMat
 
 
-
+	
+	
+# Find the midpoint of your current selection
+def get_selection_centre(polygons=False):
+	
+	me = bpy.context.active_object.data
+	
+	if not polygons:
+		polygons = get_selected_polygons()
+	
+	centre = mathutils.Vector()
+	
+	i = 0
+	for p in polygons:
+		for v in p.vertices:
+			centre += me.vertices[v].co
+			i+=1
+		
+	centre /= i
+	
+	return centre
+	
+	
+	
+# Get the midpoint of a polygon
+def get_polygon_centre(polygon=False):
+	
+	me = bpy.context.active_object.data
+	
+	centre = mathutils.Vector()
+	
+	for v in polygon.vertices:
+		centre += me.vertices[v].co
+		
+	return centre / len(polygon.vertices)
+	
+	
+	
 # Get the selection radius (minimum distance of an outer edge to the centre)
 def get_selection_radius():
 
