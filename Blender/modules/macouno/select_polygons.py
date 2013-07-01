@@ -32,10 +32,17 @@ def connected(extend=False):
 	
 		# Get a list of all vertices in selected polygons
 		vList = []
+		for p in  mesh.polygons:
+			if p.select:
+				for v in p.vertices:
+					if not v in vList:
+						vList.append(v)
+		'''
 		for v in mesh.vertices:
 			if v.select:
 				vList.append(v.index)
-				
+		'''
+		
 		if len(vList):
 			# For every deselected face, see if it shares a vert with a selected face
 			selpolygons = []
@@ -59,11 +66,31 @@ def connected(extend=False):
 				else:
 					for p in selpolygons:
 						p.select=True
+						
 
+		
+			vertexCheck()
 	return
 
+	
+	
+# Make sure only the vertices connected to selected polygons are selected
+def vertexCheck():
+
+	mesh = bpy.context.active_object.data
+	for e in mesh.edges:
+		e.select = False
+		
+	for v in mesh.vertices:
+		v.select = False
+		
+	for p in mesh.polygons:
+		if p.select:
+			for v in p.vertices:
+				mesh.vertices[v].select = True
 
 
+				
 # Innermost polygons
 def innermost(invert=False):
 
@@ -103,7 +130,9 @@ def innermost(invert=False):
 						
 					elif invert and not item in cItems:
 						item.select = True
-				
+		
+		vertexCheck()
+		
 	return
 
 
@@ -145,7 +174,9 @@ def outermost(invert=False):
 				else:
 					for p in selpolygons:
 						p.select=False
-
+		
+		vertexCheck()
+		
 	return
 
 
@@ -191,7 +222,7 @@ def checkered(seed=0, extend=False):
 	
 	# Select the polygons we found!
 	selectpolygons(selpolygons, extend)
-	
+	vertexCheck()
 	return
 
 
@@ -287,6 +318,8 @@ def selectpolygons(selpolygons, extend=False):
 		
 			if p in selpolygons:
 				p.select = True
+				
+	vertexCheck()
 	
 	return
 

@@ -66,6 +66,7 @@ class Cast_Loop():
 		self.selVerts = mesh_extras.get_selected_vertices()
 		self.outVerts = []
 		self.inVerts = []
+		self.cent = mathutils.Vector()
 		normal = mathutils.Vector()
 		
 		for p in self.me.polygons:
@@ -74,26 +75,48 @@ class Cast_Loop():
 					vert = self.me.vertices[v]
 					if vert.select and not vert in self.outVerts:
 						self.outVerts.append(vert)
+						self.cent += vert.co
 			else:
-				for v in p.vertices:
-					normal += self.me.vertices[v].normal
+				normal += p.normal
+				
+				#for v in p.vertices:
+				#	normal += self.me.vertices[v].normal
+				
+				
+		# Hey we need outer edges too!
+		self.outEdges = []
+		
+		for e in self.me.edges:
+			
+			foundIn = False
+			foundOut = False
+			
+			v1 = e.vertices[0]
+			v2 = e.vertices[1]
+			
+			for p in self.me.polygons:
+				
+				if foundIn is False and p.select is True and v1 in p.vertices and v2 in p.vertices:
+					foundIn = True				
+				if foundOut is False and p.select is False and v1 in p.vertices and v2 in p.vertices:
+					foundOut = True
+		
+		
+			if foundIn and foundOut:
+				self.outEdges.append(e)
 					
+		print('found',len(self.outEdges),'edges')
+		
 		normal = normal.normalized()
 		vCount = len(self.outVerts)
+		self.cent /= vCount
 		
-		for v in self.me.vertices:
+		# Find all verts inside of the selection
+		for v in self.selVerts:
 			if v.select and not v in self.outVerts:
 				self.inVerts.append(v)
 		
 
-		
-		# Find the midpoint
-		self.cent = mathutils.Vector()
-		for v in self.outVerts:
-			self.cent += v.co
-			#normal += v.normal
-		self.cent /= vCount
-		
 		# make a quaternion and a matrix representing this "plane"
 		quat = normal.to_track_quat('-Z', 'Y')
 		mat = quat.to_matrix()
@@ -139,6 +162,7 @@ class Cast_Loop():
 		self.oVerts = [v1]
 		self.oRig = v1co
 		self.dVec = False
+		self.doneEdges = []
 		self.stepRound(v1in,v1co,(step))
 		
 		if shape != 'CIR':
@@ -224,29 +248,7 @@ class Cast_Loop():
 						
 						v.co = bLine + self.cent
 				
-			
-			# Smooth the inner verts please (twice)
-			for x in range(0,5):
-				# First create a list with neat average positions
-				newCo = []
-				for v1 in self.inVerts:
-					
-					v1co = mathutils.Vector(v1.co)
-					v1in = v1.index
-					v1cn = 1
-					
-					for p in self.me.polygons:
-						if v1in in p.vertices:
-							for v2in in p.vertices:
-								v1co += self.me.vertices[v2in].co
-								v1cn += 1
-								
-					v1co /= v1cn
-					newCo.append(v1co)
-					
-				# Apply the list of neat average positions
-				for i, v in enumerate(self.inVerts):
-					v.co = newCo[i]
+			mesh_extras.smooth_selection(self.inVerts, 5)
 		
 		
 		bpy.ops.object.mode_set(mode='EDIT')
@@ -256,47 +258,46 @@ class Cast_Loop():
 	# Rotate each vert around the center to create a neat circle
 	def stepRound(self,v1in,v1co, step):
 	
-		for e in self.me.edges:
+		for e in self.outEdges:
 			
-			if v1in in e.vertices:
+			eIn = e.index
+			
+			if not eIn in self.doneEdges and v1in in e.vertices:
+			
 				if v1in == e.vertices[0]:
 					v2in = e.vertices[1]
 				elif v1in == e.vertices[1]:
 					v2in = e.vertices[0]
-				
+
 				v2 = self.me.vertices[v2in]
-					
-				# make really sure this vert is the next in the loop
-				if v2 in self.outVerts and not v2in in self.doneVerts:
-					
-					v2 = self.me.vertices[v2in]
-					
-					# Add to the list of ordered verts!
-					self.oVerts.append(v2)
-					
-					v2co = v2.co - self.cent
-					
-					if self.dVec is False:
-						self.dVec = v2co - v1co
-						
-					# If the dot is negative... we're moving back along the circle and we invert the step (move the vert toward the previous one in stead of away from it)
-					dot = v2co.dot(self.dVec)
-					
-					#pre = v2co.angle(self.oRig)
-					if dot < 0.0:
-						v2co =  misc.rotate_vector_to_vector(v2co, v1co, -step)
-					else:
-						v2co =  misc.rotate_vector_to_vector(v2co, v1co, step)
-					
-					#post = v2co.angle(self.oRig)
-					#print('  dot',round(dot,2),'pre',round(math.degrees(pre)),'post',round(math.degrees(post)),'step',round(math.degrees(step)))
-					v2.co = v2co + self.cent
-					
-					self.doneVerts.append(v2in)
+				
+				# Add to the list of ordered verts!
+				self.oVerts.append(v2)
+				
+				v2co = v2.co - self.cent
+				
+				if self.dVec is False:
 					self.dVec = v2co - v1co
 					
-					self.stepRound(v2in,v2co,step)
-					return
+				# If the dot is negative... we're moving back along the circle and we invert the step (move the vert toward the previous one in stead of away from it)
+				dot = v2co.dot(self.dVec)
+				
+				#pre = v2co.angle(self.oRig)
+				if dot < 0.0:
+					v2co =  misc.rotate_vector_to_vector(v2co, v1co, -step)
+				else:
+					v2co =  misc.rotate_vector_to_vector(v2co, v1co, step)
+				
+				#post = v2co.angle(self.oRig)
+				#print('  dot',round(dot,2),'pre',round(math.degrees(pre)),'post',round(math.degrees(post)),'step',round(math.degrees(step)))
+				v2.co = v2co + self.cent
+				
+				self.doneVerts.append(v2in)
+				self.doneEdges.append(eIn)
+				self.dVec = v2co - v1co
+				
+				self.stepRound(v2in,v2co,step)
+				return
 				
 
 		

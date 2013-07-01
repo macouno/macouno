@@ -173,6 +173,10 @@ class Entoform():
 				select_polygons.none()
 				select_polygons.in_group(group)
 				
+				mesh_extras.smooth_selection()
+				
+
+				
 				# No need to continue if we have no selected polygons
 				if not mesh_extras.contains_selected_item(self.me.polygons):
 					print(pad,'skip ',stepText,'no selection',string['action']['name'])
@@ -815,6 +819,10 @@ class Entoform():
 					
 					if selection['type'] == 'joint':
 					
+						return newGroups, formmatrix, growmatrices
+						
+						# Select connected twice to make sure we have enough now that selection is doubled
+						select_polygons.connected(True)
 						select_polygons.connected(True)
 						
 						selCnt = len(mesh_extras.get_selected_polygons())
@@ -1004,7 +1012,7 @@ class Entoform():
 		
 		polygons = mesh_extras.get_selected_polygons()
 		
-		addGroups, addMatrices = mesh_extras.group_selection(area = selection['area'], name=string['name'])
+		addGroups, addMatrices = mesh_extras.group_selection(area = selection['area'], name=string['name'],chunkProduct=2)
 		
 		for g in addGroups:
 			newGroups.append(g)

@@ -32,7 +32,7 @@ def get_selection_matrix(polygons=False):
 			if closest is False or pDist < closest:
 				closest = pDist
 				
-		#print('		close far',closest,furthest,centre)
+		#print('		close far',len(polygons),closest,furthest,centre)
 	
 	yVec = mathutils.Vector()
 	zVec = mathutils.Vector()
@@ -40,7 +40,7 @@ def get_selection_matrix(polygons=False):
 	# Ok so we have a basic matrix, but lets base it more on the mesh!
 	for p in polygons:
 	
-		if pLen > 1:
+		if pLen > 1 and closest < furthest:
 			# now we find out how close this poly is to the selection centre
 			pCent = get_polygon_centre(p)
 			pDist = pCent - centre
@@ -133,6 +133,38 @@ def get_polygon_centre(polygon=False):
 		
 	return centre / len(polygon.vertices)
 	
+	
+	
+# Smooth a specific list of verts
+def smooth_selection(verts=False,loops=5):
+
+	me = bpy.context.active_object.data
+
+	if not verts:
+		verts = get_selected_vertices()
+
+	# Smooth the inner verts please (twice)
+	for x in range(0,loops):
+		# First create a list with neat average positions
+		newCo = []
+		for v1 in verts:
+			
+			v1co = mathutils.Vector(v1.co)
+			v1in = v1.index
+			v1cn = 1
+			
+			for p in me.polygons:
+				if v1in in p.vertices:
+					for v2in in p.vertices:
+						v1co += me.vertices[v2in].co
+						v1cn += 1
+						
+			v1co /= v1cn
+			newCo.append(v1co)
+			
+		# Apply the list of neat average positions
+		for i, v in enumerate(verts):
+			v.co = newCo[i]
 	
 	
 # Get the selection radius (minimum distance of an outer edge to the centre)
@@ -406,7 +438,7 @@ def get_corner_polygon(polygons):
 	
 # Create vertex groups containing this selection (in different groupings)
 # Written for use with the Entoforms addon
-def group_selection(area='area', name='group'):
+def group_selection(area='area', name='group', chunkProduct=1):
 
 	ob = bpy.context.active_object
 	polygons = get_selected_polygons()
@@ -469,14 +501,18 @@ def group_selection(area='area', name='group'):
 									if not v in chunkV:
 										chunkV.append(v)
 								chunkP.append(p2)
+								
+					# Make sure the chunk's size is a multiple of the product!
+					# This usually to make sure the chunk is a multiple of 2....
+					if not len(chunkP) % chunkProduct:
 					
-					newMatrices.append(get_selection_matrix(chunkP))
-					
-					newGroup = ob.vertex_groups.new(name)
-					newGroups.append(newGroup)					
-					for v in chunkV:
-						newGroup.add([v], 1.0, 'REPLACE')
-								 
+						newMatrices.append(get_selection_matrix(chunkP))
+						
+						newGroup = ob.vertex_groups.new(name)
+						newGroups.append(newGroup)					
+						for v in chunkV:
+							newGroup.add([v], 1.0, 'REPLACE')
+									 
 					for p in chunkP:
 						selPolys.remove(p)			
 
