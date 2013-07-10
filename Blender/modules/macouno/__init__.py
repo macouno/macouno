@@ -29,6 +29,6 @@ __all__ = (
     "liberty",
     "mesh_extras",
     "misc",
-    "select_polygons",
-    "select_vertices",
+    "select_bmesh_faces",
+	"select_polygons",
     )
