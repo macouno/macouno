@@ -56,7 +56,7 @@ else:
 import bpy, mathutils, math, cProfile, colorsys, datetime, time
 from mathutils import geometry
 from bpy.props import StringProperty, IntProperty, BoolProperty
-from macouno import mesh_extras, misc, colour, select_polygons, falloff_curve, liberty
+from macouno import mesh_extras, misc, colour, select_bmesh_faces, falloff_curve, liberty
 
 # Make it as a class
 class Entoform():
@@ -179,8 +179,8 @@ class Entoform():
 				self.ob['growmatrix'] = growmatrix
 			
 				# Select a group
-				select_polygons.none()
-				select_polygons.in_group(group.index)
+				select_bmesh_faces.go(mode='NONE')
+				select_bmesh_faces.go(mode='GROUPED', group=group.index)
 				
 				mesh_extras.smooth_selection()
 				
@@ -252,9 +252,7 @@ class Entoform():
 							
 						bpy.ops.object.mode_set(mode='OBJECT')
 						
-						
-						select_polygons.none()
-						select_polygons.in_group(group.index)
+						select_bmesh_faces.go(mode='GROUPED', group=group.index)
 						
 						self.applyGrowthColor(a)
 						
@@ -565,7 +563,7 @@ class Entoform():
 						
 						colour.applyColorToPolygon(p.index, vec)
 						
-			select_polygons.outermost()
+			select_bmesh_faces.go(mode='OUTER')
 			
 			vec = list(a['jointcolor'])
 			
@@ -644,7 +642,7 @@ class Entoform():
 			# Loop through all the steps
 			for i in range(int(steps)):
 			
-				select_polygons.outermost(True)		
+				select_bmesh_faces.go(mode='OUTER', invert=True)		
 			
 				# Find all the selected vertices
 				selPolygons = mesh_extras.get_selected_polygons()
@@ -732,9 +730,6 @@ class Entoform():
 			
 				selection['divergence'] = self.choose('float', 'divergence', 'directional divergence')
 					
-					
-		if selection['area'] == 'polygons':
-			selection['limit'] =  self.choose('int', 'limit', 'selection limit')
 			
 		selection['formmatrix'] = ''
 		selection['growmatrices'] = []
@@ -795,12 +790,14 @@ class Entoform():
 		formmatrix = mathutils.Matrix()
 		growmatrices = []
 		
-		# Deselect all polygons to start clean!
-		select_polygons.none()
-		
 		# Select everything in the base groups
-		for g in baseGroups:
-			select_polygons.in_group(g.index,True)
+		for i, g in enumerate(baseGroups):
+			# Deselect on the first go
+			if not i:
+				e = False
+			else:
+				e = True
+			select_bmesh_faces.go(mode='GROUPED', extend=e, group=g.index)
 			
 		#print('in_group',len(mesh_extras.get_selected_polygons()))
 			
@@ -810,15 +807,15 @@ class Entoform():
 			# Select the polygons at the tip in a certain direction
 			if selection['type'] == 'joint':
 			
-				select_polygons.innermost()
+				select_bmesh_faces.go(mode='INNER')
 					
 				if mesh_extras.contains_selected_item(self.me.polygons):
 					
 					return newGroups, formmatrix, growmatrices
 					
 					# Select connected twice to make sure we have enough now that selection is doubled
-					select_polygons.connected(True)
-					select_polygons.connected(True)
+					select_bmesh_faces.go(mode='CONNECTED', extend=True)
+					select_bmesh_faces.go(mode='CONNECTED', extend=True)
 					
 					selCnt = len(mesh_extras.get_selected_polygons())
 					nuCnt = selCnt
@@ -827,7 +824,7 @@ class Entoform():
 					# If the nr of polygons selected isn't diminished... we select less!
 					while selCnt and selCnt == nuCnt and div > 0.1:
 					
-						select_polygons.by_direction(selection['vector'],div)
+						select_bmesh_faces.go(mode='DIRECTIONAL', direction=selection['vector'], limit=div)
 						div = div * 0.75
 						selPolygons = mesh_extras.get_selected_polygons()
 						nuCnt = len(selPolygons)
@@ -848,7 +845,7 @@ class Entoform():
 					nuCnt = len(selPolygons)
 						
 					if nuCnt == selCnt:
-						select_polygons.none()
+						select_bmesh_faces.go(mode='NONE')
 					
 					# If we have selected polygons... we can add em to a new group
 					newGroups, formmatrix, growmatrices = self.addToNewGroups(string, newGroups, growmatrices)
@@ -857,7 +854,7 @@ class Entoform():
 			# Select by direction
 			elif selection['type'] == 'direction':
 
-				select_polygons.by_direction(selection['vector'],selection['divergence'])
+				select_bmesh_faces.go(mode='DIRECTIONAL', direction=selection['vector'],limit=selection['divergence'])
 				
 				newGroups, formmatrix, growmatrices = self.addToNewGroups(string, newGroups, growmatrices)
 				
@@ -1006,10 +1003,6 @@ class Entoform():
 		
 	# Just some nice checks to do with selections
 	def doubleCheckSelection(self, selection):
-		
-		# Make sure there's never more than 12 polygons we grow out of
-		if selection['area'] == 'polygons':
-			select_polygons.limit(selection['limit'], self.dnaString)
 				
 		# If we still have something selected, then we need to check for Islands (only one coninuous island should be selected)
 		if selection['type'] == 'direction' and selection['area'] == 'area' and mesh_extras.contains_selected_item(self.me.polygons):
@@ -1298,7 +1291,6 @@ class Entoform():
 			'loopscale': {'min': 0.3, 'max': 1.3},
 			'rotation': {'min': math.radians(-60.0), 'max': math.radians(60.0)},
 			'divergence': {'min': math.radians(45),'max': math.radians(75)},
-			'limit': {'min': 4, 'max': 6},
 			}
 			
 		self.options['secondary'] = {
@@ -1309,7 +1301,6 @@ class Entoform():
 			'loopscale': {'min': -0.2, 'max': 0.2},
 			'rotation': {'min': math.radians(-60.0), 'max': math.radians(60.0)},
 			'divergence': {'min': math.radians(-15),'max': math.radians(15)},
-			'limit': {'min': -2, 'max': 2},
 			}
 			
 		self.options['falloffs'] = {'a': 'LIN', 'b': 'INC', 'c': 'DEC', 'd': 'SWO', 'e': 'SPI', 'f': 'BUM', 'g': 'SWE'}

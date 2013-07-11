@@ -112,7 +112,7 @@ def inner(bm):
 	
 	
 # Select the outermost faces of your current selection
-def outer(bm):
+def outer(bm, invert=False):
 
 	selFaces = get_selected(bm)
 	selLen = len(selFaces)
@@ -121,33 +121,35 @@ def outer(bm):
 	if not selLen:
 		return bm
 		
-	keepThese = []
+	outerFaces = []
 	outerVerts = []
 	
 	# Find faces connected to unselected faces
 	for f1 in selFaces:
-		keep = False
+		out = False
 		for v in f1.verts:
 		
 			# No need to loop through connected faces if this vert is on the outside
 			if v.index in outerVerts:
-				keepThese.append(f1)
+				outerFaces.append(f1)
 				break
 			
 			# Loop through the faces connected to this vert
 			for f2 in v.link_faces:
 				if not f2.select:
-					keepThese.append(f1)
+					outerFaces.append(f1)
 					outerVerts.append(v.index)
-					keep = True
+					out = True
 					break
-			if keep:
+			if out:
 				break
 	
 	# Unselect those that don't need to be kept
-	if len(keepThese) < selLen:
+	if len(outerFaces) < selLen:
 		for f in selFaces:
-			if not f in keepThese:
+			if invert and f in outerFaces:
+				f.select_set(False)
+			elif not invert and not f in outerFaces:
 				f.select_set(False)
 	
 	return bm
@@ -248,7 +250,7 @@ def go(mode='ALL', invert=False, extend=False, group=0, direction=(0.0,0.0,1.0),
 		bm = inner(bm)
 
 	elif mode == 'OUTER':
-		bm = outer(bm)
+		bm = outer(bm, invert)
 		
 	elif mode == 'CONNECTED':
 		bm = connected(bm, extend)		
