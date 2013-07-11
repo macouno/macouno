@@ -254,7 +254,7 @@ class Entoform():
 						
 						
 						select_polygons.none()
-						select_polygons.in_group(group)
+						select_polygons.in_group(group.index)
 						
 						self.applyGrowthColor(a)
 						
@@ -800,7 +800,7 @@ class Entoform():
 		
 		# Select everything in the base groups
 		for g in baseGroups:
-			select_polygons.in_group(g,True)
+			select_polygons.in_group(g.index,True)
 			
 		#print('in_group',len(mesh_extras.get_selected_polygons()))
 			

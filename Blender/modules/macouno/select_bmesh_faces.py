@@ -1,4 +1,4 @@
-import bpy, mathutils, bmesh
+import bpy, mathutils, bmesh, math
 
 
 
@@ -38,7 +38,6 @@ def put_bmesh(bm):
 		bmesh.update_edit_mesh(me, True)
 	
 	
-
 	
 # Get a list of all selected faces
 def get_selected(bm):
@@ -155,6 +154,7 @@ def outer(bm):
 	
 	
 	
+# SELECT ALL FACES CONNECTED BY A VERT TO THE CURRENT SELECTION
 def connected(bm, extend=False):
 
 	# Make a list of unselected faces that have a selected vert
@@ -177,15 +177,9 @@ def connected(bm, extend=False):
 	
 	return bm
 	
-	
-
-def directional(bm, extend=False):
-
-	return bm
-	
 
 	
-# SELECT ALL IN A GROUP (takes the group iindex)
+# SELECT ALL IN A VERTEX GROUP (takes the group iindex)
 def grouped(bm, extend=False, group=0):
 
 	gi = bpy.context.active_object.vertex_groups.active_index
@@ -195,25 +189,52 @@ def grouped(bm, extend=False, group=0):
 			
 	for f in bm.faces:
 		
-		found = False
+		# Count all the verts that are in the vertex group (in this face)
 		fLen = 0
 		for v in f.verts:
-			dvert = v[dvert_lay]
 			
-			if group in dvert:
+			if group in v[dvert_lay]:
 				fLen += 1
 				
+		# Only if all verts are in the group, do we select the face
 		if fLen and fLen == len(f.verts):
 			f.select_set(True)
 		elif f.select and not extend:
 			f.select_set(False)
 			
 	return bm
+	
+	
 
+# SELECT ALL FACES WITH A NORMAL IN A SPECIFIC DIRECTION
+def directional(bm, extend=False, direction=(0.0,0.0,1.0), limit=(math.pi*0.5)):
+	
+	# Make sure the direction is a vector object
+	direction = mathutils.Vector(direction)
+	
+	# Make sure the direction has a length
+	if direction.length:
+	
+		for f in bm.faces:
+		
+			# Find the angle between the face normal and the direction
+			if f.normal.length:
+				angle = direction.angle(f.normal)
+			else:
+				angle = 0.0
+				
+			# Check against the limit
+			if angle <= limit:
+				f.select_set(True)
+			elif f.select and not extend:
+				f.select_set(False)
+	
+	return bm
+	
 	
 	
 # INITIATE >>> This way we don't have to do the same thing over and over
-def go(mode='ALL', invert=False, extend=False, group=0):
+def go(mode='ALL', invert=False, extend=False, group=0, direction=(0.0,0.0,1.0), limit=(math.pi*0.5)):
 
 	bm = get_bmesh()
 
@@ -233,7 +254,7 @@ def go(mode='ALL', invert=False, extend=False, group=0):
 		bm = connected(bm, extend)		
 		
 	elif mode == 'DIRECTIONAL':
-		bm = directional(bm, extend)
+		bm = directional(bm, extend, direction, limit)
 		
 	elif mode == 'GROUPED':
 		bm = grouped(bm, extend, group)
