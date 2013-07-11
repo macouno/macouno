@@ -44,6 +44,15 @@ Additional links:
 	e-mail: dolf {at} macouno {dot} com
 """
 
+'''
+# TRY THIS!!!
+if "bpy" in locals():
+    import imp
+    imp.reload(Boltfactory)
+else:
+    from add_mesh_BoltFactory import Boltfactory
+	'''
+	
 import bpy, mathutils, math, cProfile, colorsys, datetime, time
 from mathutils import geometry
 from bpy.props import StringProperty, IntProperty, BoolProperty
@@ -460,7 +469,7 @@ class Entoform():
 				'sub': False,
 				}
 				
-		elif style == 'bump' or selection['type'] == 'loops':
+		elif style == 'bump':
 		
 			action = {
 				'name':style,
@@ -716,18 +725,6 @@ class Entoform():
 				
 				selection['area'] = self.choose('select', 'areatypes', 'area for selection')
 				selection['divergence'] =  self.choose('float', 'divergence', 'directional divergence')
-				
-			elif selection['type'] == 'liberal':
-				selection['area'] = 'polygons'
-				
-			elif selection['type'] == 'checkered':
-				selection['area'] = 'polygons'
-				
-			elif selection['type'] == 'loops':
-				selection['frequency'] = self.choose('select', 'frequencies', 'loop frequencies')
-					
-			elif selection['type'] == 'tip':
-				selection['area'] = self.choose('select', 'areatypes', 'area for selection')
 					
 			elif selection['type'] == 'joint':
 				selection['vector'] = self.choose('select', 'local_directions', 'selection direction')
@@ -811,87 +808,50 @@ class Entoform():
 		if mesh_extras.contains_selected_item(self.me.polygons):
 		
 			# Select the polygons at the tip in a certain direction
-			if selection['type'] == 'joint' or selection['type'] == 'tip':
+			if selection['type'] == 'joint':
 			
 				select_polygons.innermost()
 					
 				if mesh_extras.contains_selected_item(self.me.polygons):
 					
-					if selection['type'] == 'joint':
+					return newGroups, formmatrix, growmatrices
 					
-						return newGroups, formmatrix, growmatrices
-						
-						# Select connected twice to make sure we have enough now that selection is doubled
-						select_polygons.connected(True)
-						select_polygons.connected(True)
-						
-						selCnt = len(mesh_extras.get_selected_polygons())
-						nuCnt = selCnt
-						div = selection['divergence']
-						
-						# If the nr of polygons selected isn't diminished... we select less!
-						while selCnt and selCnt == nuCnt and div > 0.1:
-						
-							select_polygons.by_direction(selection['vector'],div)
-							div = div * 0.75
-							selPolygons = mesh_extras.get_selected_polygons()
-							nuCnt = len(selPolygons)
-							
-						# Check for opposing normals.. .cause they should not be there!
-						for f1 in selPolygons:
-							if f1.select:
-								f1No = f1.normal
-								for f2 in selPolygons:
-									if f2.select and not f1 is f2:
-										f2No = f2.normal
-										ang = f2No.angle(f1No)
-										if ang > math.radians(120):
-											f1.select = False
-											break
-						
+					# Select connected twice to make sure we have enough now that selection is doubled
+					select_polygons.connected(True)
+					select_polygons.connected(True)
+					
+					selCnt = len(mesh_extras.get_selected_polygons())
+					nuCnt = selCnt
+					div = selection['divergence']
+					
+					# If the nr of polygons selected isn't diminished... we select less!
+					while selCnt and selCnt == nuCnt and div > 0.1:
+					
+						select_polygons.by_direction(selection['vector'],div)
+						div = div * 0.75
 						selPolygons = mesh_extras.get_selected_polygons()
 						nuCnt = len(selPolygons)
-							
-						if nuCnt == selCnt:
-							select_polygons.none()
+						
+					# Check for opposing normals.. .cause they should not be there!
+					for f1 in selPolygons:
+						if f1.select:
+							f1No = f1.normal
+							for f2 in selPolygons:
+								if f2.select and not f1 is f2:
+									f2No = f2.normal
+									ang = f2No.angle(f1No)
+									if ang > math.radians(120):
+										f1.select = False
+										break
+					
+					selPolygons = mesh_extras.get_selected_polygons()
+					nuCnt = len(selPolygons)
+						
+					if nuCnt == selCnt:
+						select_polygons.none()
 					
 					# If we have selected polygons... we can add em to a new group
 					newGroups, formmatrix, growmatrices = self.addToNewGroups(string, newGroups, growmatrices)
-					
-			
-			# Select by pi (fake random)
-			elif selection['type'] == 'liberal':
-			
-				select_polygons.liberal(self.dnaString)
-				
-				# If we have selected polygons... we can add em to a new group
-				newGroups, formmatrix, growmatrices = self.addToNewGroups(string, newGroups, growmatrices)
-				
-				
-			# Select all loops in the group
-			elif selection['type'] == 'loops':
-				
-				select_polygons.connected()
-				self.deselectUnGrouped()
-				
-				step = 0
-				
-				# As long as something is selected, we can continue
-				while mesh_extras.contains_selected_item(self.ob.data.polygons):
-					
-					select_polygons.connected()
-					self.deselectGrouped(baseGroups)
-					
-					# Skip selection just in case
-					if not step % selection['frequency']:
-						
-						# If we have selected polygons... we can add em to a new group
-						newGroups, formmatrix, grw = self.addToNewGroups(string, newGroups, growmatrices)
-						growmatrices.extend(grw)
-						
-					step += 1
-					
-				print(step)
 				
 				
 			# Select by direction
@@ -1359,8 +1319,8 @@ class Entoform():
 		self.options['loopshapes'] = {'a': 'CIR', 'b': 'TRI', 'c': 'SQA'}
 		self.options['loopfalloffs'] = {'a': 'STR', 'b': 'BUM', 'c': 'SPI', 'd': 'SWE'}
 		
-		self.options['selectiontypes'] = {'a': 'direction', 'b': 'liberal', 'c': 'joint', 'd': 'all', 'e': 'checkered', 'f': 'loops'} # tip = disabled
-		self.options['selectioneyes'] = {'a': 'direction', 'b': 'liberal', 'c': 'joint', 'd': 'all', 'e': 'checkered'}
+		self.options['selectiontypes'] = {'a': 'direction', 'b': 'joint', 'c': 'all'}
+		self.options['selectioneyes'] = {'a': 'direction', 'b': 'joint', 'c': 'all'}
 		
 		self.options['directions'] = {
 			'a': mathutils.Vector((1.0,0.0,0.0)), 	#top

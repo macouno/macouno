@@ -30,5 +30,4 @@ __all__ = (
     "mesh_extras",
     "misc",
     "select_bmesh_faces",
-	"select_polygons",
     )
