@@ -180,7 +180,7 @@ class Entoform():
 			
 				# Select a group
 				select_polygons.none()
-				select_polygons.in_group(group)
+				select_polygons.in_group(group.index)
 				
 				mesh_extras.smooth_selection()
 				

@@ -179,8 +179,41 @@ def connected(bm, extend=False):
 	
 	
 
+def directional(bm, extend=False):
+
+	return bm
+	
+
+	
+# SELECT ALL IN A GROUP (takes the group iindex)
+def grouped(bm, extend=False, group=0):
+
+	gi = bpy.context.active_object.vertex_groups.active_index
+	
+	# only ever one deform weight layer
+	dvert_lay = bm.verts.layers.deform.active
+			
+	for f in bm.faces:
+		
+		found = False
+		fLen = 0
+		for v in f.verts:
+			dvert = v[dvert_lay]
+			
+			if group in dvert:
+				fLen += 1
+				
+		if fLen and fLen == len(f.verts):
+			f.select_set(True)
+		elif f.select and not extend:
+			f.select_set(False)
+			
+	return bm
+
+	
+	
 # INITIATE >>> This way we don't have to do the same thing over and over
-def go(mode='ALL', invert=False, extend=False):
+def go(mode='ALL', invert=False, extend=False, group=0):
 
 	bm = get_bmesh()
 
@@ -197,6 +230,12 @@ def go(mode='ALL', invert=False, extend=False):
 		bm = outer(bm)
 		
 	elif mode == 'CONNECTED':
-		bm = connected(bm, extend)
+		bm = connected(bm, extend)		
+		
+	elif mode == 'DIRECTIONAL':
+		bm = directional(bm, extend)
+		
+	elif mode == 'GROUPED':
+		bm = grouped(bm, extend, group)
 
 	put_bmesh(bm)
