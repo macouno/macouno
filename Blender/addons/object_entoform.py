@@ -66,6 +66,8 @@ class Entoform():
 	
 		if not run:
 			return
+			
+		self.done = False
 	
 		# Start by setting up some default vars and such (in sepparate function because it's a bit much)
 		self.setup(context, dnaString, steplimit, keepgroups)
@@ -104,11 +106,13 @@ class Entoform():
 			mod = self.ob.modifiers[0]
 			mod.levels = subdivide
 			bpy.ops.object.modifier_apply(apply_as='DATA', modifier="Subsurf")
-		
-		bpy.ops.object.mode_set(mode='EDIT')
+			
 		
 		if finish:
+			bpy.ops.object.mode_set(mode='EDIT')
 			self.finish(context)
+		else:
+			bpy.ops.object.mode_set(mode='OBJECT')
 			
 		self.reset(context)
 		
@@ -117,28 +121,24 @@ class Entoform():
 	# Go grow something!
 	def executeDNA(self, string, baseGroups, baseWeight):
 		
+		pad = str(' ').rjust(string['level'], ' ')
+		
 		# Stop if the limit is reached! (mostly for debugging)
 		if self.steplimit and string['number'] >= self.steplimit:
-			print('Reached steplimit',self.steplimit,'STOPPING')
+			print(pad,' # Reached steplimit',self.steplimit,'>> RETURNING')
 			return
-		'''
-		if string['number'] >= 1:
-			#if string['number'] in [0,1,3]:
-			return
-		
-		elif string['number'] == 5 or string['number'] == 6:
+		'''		
+		if string['number'] == 5 or string['number'] == 6:
 			return	
 		'''
-		# Redraw hack to see what is happening
-		#bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
-		
+
 		newGroups, formmatrix, growmatrices = self.makeAffectedGroups(string, baseGroups)
 		groupLen = len(newGroups)
 		
 		# Temporary halt!
 		#return
 		
-		pad = str(' ').rjust(string['level'], ' ')
+		
 		
 		idText = 'limb '+misc.nr4(string['number'])+' '+string['name'].ljust(10, ' ')
 		print(pad,idText)
@@ -150,7 +150,7 @@ class Entoform():
 				
 			# Loop through all the groups
 			for i, group in enumerate(newGroups):
-			
+					
 				# The step number to print out
 				stepText = misc.nr4(i+1)+' of '+misc.nr4(groupLen)
 			
@@ -179,22 +179,20 @@ class Entoform():
 				self.ob['growmatrix'] = growmatrix
 			
 				# Select a group
-				select_bmesh_faces.go(mode='NONE')
 				select_bmesh_faces.go(mode='GROUPED', group=group.index)
 				
 				mesh_extras.smooth_selection()
 				
 
-				
 				# No need to continue if we have no selected polygons
 				if not mesh_extras.contains_selected_item(self.me.polygons):
 					print(pad,'skip ',stepText,'no selection',string['action']['name'])
 					
 				else:
 					
-					a = string['action']
+					action = string['action']
 					
-					if a['type'] == 'grow':
+					if action['type'] == 'grow':
 							
 						# Check for mirroring
 						right = mathutils.Vector((1.0,0.0,0.0))
@@ -202,38 +200,38 @@ class Entoform():
 						
 						# If we're aiming left we "invert" the rotation
 						if right.dot(check) < 0.0:
-							rot = mathutils.Vector((-a['rotation'][0],a['rotation'][1],-a['rotation'][2]))
+							rot = mathutils.Vector((-action['rotation'][0],action['rotation'][1],-action['rotation'][2]))
 						else:
-							rot = a['rotation']
+							rot = action['rotation']
 					
 						# Add relative intensity here (half the original + half the weight)
-						weight = baseWeight * self.getWeight(groupLen, a['scalin'])
+						weight = baseWeight * self.getWeight(groupLen, action['scalin'])
 						
-						trans = a['translation']
+						trans = action['translation']
 						#trans = self.applyIntensity(a['translation'], weight, 'float')
 						#rot = self.applyIntensity(rot, weight, 'inc')
 					
-					if a['type'] == 'grow' and trans == 0.0:
+					if action['type'] == 'grow' and trans == 0.0:
 					
-						print(pad,'skip ',stepText,'too short',trans,'from',a['translation'])
+						print(pad,'skip ',stepText,'too short',trans,'from',action['translation'])
 					
 					else:
 					
-						print(pad,'step ',stepText,a['name'])
+						print(pad,'step ',stepText,action['name'])
 						#print(self.applyIntensity(a['push'], weight, 'float'))
-						
+
 						bpy.ops.object.mode_set(mode='EDIT')
-						
+
 						#return
 						
 						# Cast the selection to the correct shape please
-						bpy.ops.mesh.cast_loop(shape=a['loop_shape'], scale=1, scale_falloff='STR')
+						bpy.ops.mesh.cast_loop(shape=action['loop_shape'], scale=1, scale_falloff='STR')
 						
-						if a['type'] == 'bump':
+						if action['type'] == 'bump':
 						
 							bpy.ops.mesh.bump(
-								type=a['bumptype'],
-								scale=a['bumpscale'],
+								type=action['bumptype'],
+								scale=action['bumpscale'],
 								steps=True,
 								)
 								
@@ -242,35 +240,39 @@ class Entoform():
 							bpy.ops.mesh.grow(
 								translation=trans,
 								rotation=rot,
-								rotation_falloff=a['rotation_falloff'],
-								scale=a['scale'],
-								scale_falloff=a['scale_falloff'],
+								rotation_falloff=action['rotation_falloff'],
+								scale=action['scale'],
+								scale_falloff=action['scale_falloff'],
 								retain=True,
 								steps=True,
 								debug=False,
 								)
 							
-						bpy.ops.object.mode_set(mode='OBJECT')
-						
+						#print('0')
 						select_bmesh_faces.go(mode='GROUPED', group=group.index)
-						
-						self.applyGrowthColor(a)
-						
-						if a['type'] == 'grow':
-							self.applyGrowthCrease(a)
+						#print('2')
+						bpy.ops.object.mode_set(mode='OBJECT')
+						#print('3')
+						self.applyGrowthColor(action)
+						#print('4')
+						if action['type'] == 'grow':
+							self.applyGrowthCrease(action)
 						
 						# Remove new stuff from all but the current group
 						self.cleanGroup(group)
-						
+						#print('5')
 						# Keep track of how much steps we've taken
 						self.dnaStep += 1
 						
+						# Redraw hack to see what is happening
+						#bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
+
 						# If there's a sub
 						if len(string['strings']):
 							for s in string['strings']:
-								#print('going sub', string['name'], s['name'])
-								self.executeDNA(s, [group], weight)
-		
+								if s['number'] < self.steplimit or not self.steplimit:
+									#print('going sub', string['name'], s['name'])
+									self.executeDNA(s, [group], weight)
 		
 		
 	def createDNA(self):
@@ -630,10 +632,11 @@ class Entoform():
 				
 					
 					
-	def applyGrowthCrease(self, a):
+	def applyGrowthCrease(self, action):
 		
 		# LETS LOOK AT CREASES!
-		vec = a['crease']
+		vec = action['crease']
+		#print('setting crease', vec)
 		
 		# Now we want to find out how many steps we made
 		steps = self.ob['growsteps']
@@ -641,27 +644,29 @@ class Entoform():
 			
 			# Loop through all the steps
 			for i in range(int(steps)):
-			
+				
 				select_bmesh_faces.go(mode='OUTER', invert=True)		
-			
+				
 				# Find all the selected vertices
 				selPolygons = mesh_extras.get_selected_polygons()
-				selVerts = []
-				for f in selPolygons:
-					selVerts.extend(f.vertices)
-				
-				# Loop through all edges
-				for e in self.me.edges:
-				
-					eVerts = e.vertices
+				if len(selPolygons):
+					selVerts = []
+					for f in selPolygons:
+						selVerts.extend(f.vertices)
 					
-					# If an edge has only 1 selected vert... it's "long" and on the outside of the selection
-					intersection = [v for v in e.vertices if v in selVerts]
+					# Loop through all edges
+					for e in self.me.edges:
+					
+						eVerts = e.vertices
+						
+						# If an edge has only 1 selected vert... it's "long" and on the outside of the selection
+						intersection = [v for v in e.vertices if v in selVerts]
+						
+						if len(intersection) == 1 and e.crease < 1.0:
+							#print('set crease',vec)
+							e.crease = vec
 
-					if len(intersection) == 1 and e.crease < 1.0:
-						e.crease = vec
-
-	
+		#print('finished setting crease', vec)
 	
 	
 	# Make a section type for the dna string	
@@ -671,7 +676,7 @@ class Entoform():
 			'type': 'direction',
 			'area': 'area',
 			'vector': mathutils.Vector(),
-			'divergence': math.radians(90),
+			'divergence': math.radians(45),
 			'method': 'generated'
 			}
 		
@@ -730,6 +735,9 @@ class Entoform():
 			
 				selection['divergence'] = self.choose('float', 'divergence', 'directional divergence')
 					
+					
+		if selection['area'] == 'polygons':
+			selection['limit'] =  self.choose('int', 'limit', 'selection limit')
 			
 		selection['formmatrix'] = ''
 		selection['growmatrices'] = []
@@ -776,7 +784,8 @@ class Entoform():
 		for g in self.newGroups:
 			if g.index != group.index:
 				self.ob.vertex_groups.active_index = g.index
-				bpy.ops.object.vertex_group_remove_from(all=False)
+				bpy.ops.object.vertex_group_remove_from(use_all_groups=False, use_all_verts=False)
+				#bpy.ops.object.vertex_group_remove_from(all=False)
 				
 		bpy.ops.object.mode_set(mode='OBJECT')
 		
@@ -855,6 +864,8 @@ class Entoform():
 			elif selection['type'] == 'direction':
 
 				select_bmesh_faces.go(mode='DIRECTIONAL', direction=selection['vector'],limit=selection['divergence'])
+				
+				#print('done selecting', len(mesh_extras.get_selected_polygons()),'polys in',selection['vector'],selection['divergence'])
 				
 				newGroups, formmatrix, growmatrices = self.addToNewGroups(string, newGroups, growmatrices)
 				
@@ -1004,6 +1015,11 @@ class Entoform():
 	# Just some nice checks to do with selections
 	def doubleCheckSelection(self, selection):
 				
+				
+		# Make sure there's never more than 12 polygons we grow out of
+		if selection['area'] == 'polygons':
+			select_polygons.limit(selection['limit'], self.dnaString)
+			
 		# If we still have something selected, then we need to check for Islands (only one coninuous island should be selected)
 		if selection['type'] == 'direction' and selection['area'] == 'area' and mesh_extras.contains_selected_item(self.me.polygons):
 			self.checkForIslands(selection['vector'])
@@ -1291,6 +1307,7 @@ class Entoform():
 			'loopscale': {'min': 0.3, 'max': 1.3},
 			'rotation': {'min': math.radians(-60.0), 'max': math.radians(60.0)},
 			'divergence': {'min': math.radians(45),'max': math.radians(75)},
+			'limit': {'min': 4, 'max': 6},
 			}
 			
 		self.options['secondary'] = {
@@ -1301,6 +1318,7 @@ class Entoform():
 			'loopscale': {'min': -0.2, 'max': 0.2},
 			'rotation': {'min': math.radians(-60.0), 'max': math.radians(60.0)},
 			'divergence': {'min': math.radians(-15),'max': math.radians(15)},
+			'limit': {'min': -2, 'max': 2},
 			}
 			
 		self.options['falloffs'] = {'a': 'LIN', 'b': 'INC', 'c': 'DEC', 'd': 'SWO', 'e': 'SPI', 'f': 'BUM', 'g': 'SWE'}
@@ -1547,7 +1565,7 @@ class Entoform_init(bpy.types.Operator):
 	bl_options = {'REGISTER', 'UNDO'}
 	
 	d='Selina'
-	limit = 0
+	limit = 4
 
 	dnaString = StringProperty(name="DNA", description="DNA string to define your shape", default=d, maxlen=100)
 	
@@ -1557,7 +1575,7 @@ class Entoform_init(bpy.types.Operator):
 	
 	keepgroups = BoolProperty(name='Keep groups', description='Do not remove the added vertex groups', default=True)
 	
-	finish = BoolProperty(name='Finish', description='Do some final touches', default=True)
+	finish = BoolProperty(name='Finish', description='Do some final touches', default=False)
 	
 	run = BoolProperty(name='Execute', description='Go and actually do this', default=True)
 

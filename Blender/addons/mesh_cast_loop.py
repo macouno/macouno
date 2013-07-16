@@ -64,6 +64,11 @@ class Cast_Loop():
 				
 		# Now only the outer loop
 		self.selVerts = mesh_extras.get_selected_vertices()
+		
+		if len(self.selVerts) == len(self.me.vertices):
+			print('>> NO CASTING SINCE EVERYTHING IS SELECTED <<')
+			return
+		
 		self.outVerts = []
 		self.inVerts = []
 		self.cent = mathutils.Vector()
@@ -105,7 +110,7 @@ class Cast_Loop():
 			if foundIn and foundOut:
 				self.outEdges.append(e)
 					
-		print('found',len(self.outEdges),'edges')
+		#print('found',len(self.outEdges),'edges')
 		
 		normal = normal.normalized()
 		vCount = len(self.outVerts)
