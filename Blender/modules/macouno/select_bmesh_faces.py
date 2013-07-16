@@ -8,12 +8,17 @@ def get_bmesh():
 	# Get the active mesh
 	ob = bpy.context.object
 	me = ob.data
+	
+	sel = 0
+	for f in me.polygons:
+		if f.select:
+			sel += 1
 
 	# Get a BMesh representation
 	if ob.mode == 'OBJECT':
 		#print('ob')
 		bm = bmesh.new()
-		#print('ob 2')
+		#print('ob 2',me, len(me.vertices), sel)
 		#bm.from_object(ob, bpy.context.scene)
 		bm.from_mesh(me)   # fill it in from a Mesh
 		#print('ob 3')

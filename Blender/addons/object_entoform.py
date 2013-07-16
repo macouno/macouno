@@ -254,13 +254,16 @@ class Entoform():
 						bpy.ops.object.mode_set(mode='OBJECT')
 						#print('3')
 						self.applyGrowthColor(action)
+						# RESELECT GROUPED...
+						select_bmesh_faces.go(mode='GROUPED', group=group.index)
 						#print('4')
 						if action['type'] == 'grow':
 							self.applyGrowthCrease(action)
-						
+						#select_bmesh_faces.go(mode='GROUPED', group=group.index)
+						#print('%')
 						# Remove new stuff from all but the current group
 						self.cleanGroup(group)
-						#print('5')
+						#print('PASSED - 5')
 						# Keep track of how much steps we've taken
 						self.dnaStep += 1
 						
@@ -392,7 +395,7 @@ class Entoform():
 		self.dna['strings'][1]['strings'].append(string)
 		
 		
-		
+		'''
 		# Lower legs
 		print("\n - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n")
 		print((self.stringCount+1),"Making nr",(self.stringCount+1),"DNA string for the lower legs\n")
@@ -427,7 +430,7 @@ class Entoform():
 			
 			string = self.mirrorDNA(action, selection, 2)
 			self.dna['strings'][1]['strings'].append(string)	
-		
+		'''
 		print("\n - - - DONE MAKING DNA - - - LETS GO GROW SOMETHING - - -\n")
 		
 		
@@ -572,6 +575,7 @@ class Entoform():
 			selVerts = []
 			outPolygons = []
 			
+			
 			for p in self.ob.data.polygons:
 			
 				if p.select:
@@ -627,8 +631,8 @@ class Entoform():
 							'''
 						
 			# Set the selection of polygons back to the original
-			for p in selPolygons:
-				p.select = True
+			#for p in selPolygons:
+			#	p.select = True
 				
 					
 					
@@ -765,28 +769,34 @@ class Entoform():
 		
 	# Remove the items in the current group from all others
 	def cleanGroup(self, group):
+			
+		#print('y')
+		select_bmesh_faces.go(mode='GROUPED', group=group.index)
+		#print('z')
+		select_bmesh_faces.go(mode='OUTER', invert=True)
 		
-		bpy.ops.object.mode_set(mode='EDIT')
-		self.ob.vertex_groups.active_index = group.index
 		
 		# Make sure the entire group is selected
-		bpy.ops.mesh.select_all(action='DESELECT')
-		self.ob.vertex_groups.active_index = group.index
-		bpy.ops.object.vertex_group_select()
+		#bpy.ops.mesh.select_all(action='DESELECT')
+		#self.ob.vertex_groups.active_index = group.index
+		#bpy.ops.object.vertex_group_select()
 		
 		# Set editing to vert mode before selecting less
-		bpy.ops.wm.context_set_value(data_path='tool_settings.mesh_select_mode', value="(True, False, False)")
-		bpy.ops.mesh.select_less()
+		#bpy.ops.wm.context_set_value(data_path='tool_settings.mesh_select_mode', value="(True, False, False)")
+		#bpy.ops.mesh.select_less()
 		
 		# Set editing back to face mode
-		bpy.ops.wm.context_set_value(data_path='tool_settings.mesh_select_mode', value="(False, False, True)")
+		#bpy.ops.wm.context_set_value(data_path='tool_settings.mesh_select_mode', value="(False, False, True)")
+		self.ob.vertex_groups.active_index = group.index
+		
+		bpy.ops.object.mode_set(mode='EDIT')
 		
 		for g in self.newGroups:
 			if g.index != group.index:
 				self.ob.vertex_groups.active_index = g.index
 				bpy.ops.object.vertex_group_remove_from(use_all_groups=False, use_all_verts=False)
 				#bpy.ops.object.vertex_group_remove_from(all=False)
-				
+		
 		bpy.ops.object.mode_set(mode='OBJECT')
 		
 		
@@ -824,7 +834,7 @@ class Entoform():
 					
 					# Select connected twice to make sure we have enough now that selection is doubled
 					select_bmesh_faces.go(mode='CONNECTED', extend=True)
-					select_bmesh_faces.go(mode='CONNECTED', extend=True)
+					#select_bmesh_faces.go(mode='CONNECTED', extend=True)
 					
 					selCnt = len(mesh_extras.get_selected_polygons())
 					nuCnt = selCnt
@@ -877,36 +887,6 @@ class Entoform():
 		
 		
 	
-	# Deselect all the polygons that are not in a group
-	def deselectUnGrouped(self):
-	
-		# Get the polygons (and go into object mode)
-		polygons = mesh_extras.get_selected_polygons()
-		
-		if len(polygons):
-		
-			for p in polygons:
-				if p.select:
-				
-					inGroup = True
-					
-					# See all the verts (all should be in the group!)
-					for v in p.vertices:
-					
-						found = False
-						vert = self.ob.data.vertices[v]
-						vertGroups = vert.groups
-						for g in vert.groups:
-							if g.weight:
-								found = True
-								
-						if not found:
-							inGroup = False
-							
-					if not inGroup:
-						p.select = False
-		
-						
 		
 	# Deselect all polygons that are already grouped, but not in the baseGroups
 	def deselectGrouped(self, baseGroups):
@@ -1300,7 +1280,7 @@ class Entoform():
 		self.options['bool'] = {'a': True,'b': False}
 		
 		self.options['primary'] = {
-			'translate': {'min': 2.0, 'max': 3.0},
+			'translate': {'min': 2.0, 'max': 5.0},
 			'scale': {'min': 0.4, 'max': 0.7},
 			'crease': {'min': 0.4, 'max': 0.7},
 			'bumpscale': {'min': 0.4, 'max': 0.7},
