@@ -273,6 +273,54 @@ def limit(bm, limit=1, key=''):
 	return bm
 	
 	
+
+# Find all faces connected to the current one (face)
+def get_connected(conFaces, checkFaces, face):
+
+	# Find all faces that share an edge with the current one (if they are in the list to check)
+	for e in face.edges:
+		for f in e.link_faces:
+			if f in checkFaces:
+				checkFaces.remove(f)
+				conFaces.append(f)
+				
+				conFaces, checkFaces = get_connected(conFaces, checkFaces, f)
+	
+	return conFaces, checkFaces
+	
+# Make sure there's no multiple islands selected
+def island_check(bm):
+	
+	selFaces = get_selected(bm)
+
+	if len(selFaces):
+
+		checkFaces = get_selected(bm)
+
+		biggestLen = False
+		biggestCon = False
+		
+		# For each face check how many are connected to it
+		for f in selFaces:
+			
+			if len(checkFaces) and f in checkFaces:
+				
+				conFaces, checkFaces = get_connected([], checkFaces, f)
+				
+				cnt = len(conFaces)
+				if cnt > biggestLen or biggestLen is False:
+					biggestLen = cnt
+					biggestCon = conFaces
+		
+		# Deslect all selected faces that arent part of the biggest island.
+		if not biggestLen is False:
+			for f in bm.faces:
+				if f.select and not f in biggestCon:
+					f.select_set(False)
+	
+	return bm
+	
+	
 	
 # INITIATE >>> This way we don't have to do the same thing over and over
 def go(mode='ALL', invert=False, extend=False, group=0, direction=(0.0,0.0,1.0), limit=1.57, key=''):
@@ -301,6 +349,9 @@ def go(mode='ALL', invert=False, extend=False, group=0, direction=(0.0,0.0,1.0),
 		bm = grouped(bm, extend, group)
 		
 	elif mode == 'LIMIT':
-		bm = grouped(bm, limit, key)
+		bm = grouped(bm, limit, key)		
+		
+	elif mode == 'ISLAND':
+		bm = island_check(bm)
 
 	put_bmesh(bm)

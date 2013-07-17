@@ -91,16 +91,6 @@ class Entoform():
 		
 		# Subsurf the first time if required
 		if subdivide:
-		
-			# Split the edges!
-			'''
-			bpy.ops.object.modifier_add(type='EDGE_SPLIT')
-			mod = self.ob.modifiers[0]
-			mod.use_edge_angle = False
-			mod.use_edge_sharp = True
-			bpy.ops.object.modifier_apply(apply_as='DATA', modifier="EdgeSplit")
-			'''
-			
 			bpy.ops.object.mode_set(mode='OBJECT')
 			bpy.ops.object.modifier_add(type='SUBSURF')
 			mod = self.ob.modifiers[0]
@@ -563,7 +553,7 @@ class Entoform():
 			for p in self.ob.data.polygons:
 				
 				if p.select:
-					selPolygons.append(p)
+					selPolygons.append(p.index)
 					
 					if a['colorstyle'] == 'soft':
 						
@@ -573,7 +563,7 @@ class Entoform():
 					else:
 						
 						colour.applyColorToPolygon(p.index, vec)
-						
+			
 			select_bmesh_faces.go(mode='OUTER')
 			
 			vec = list(a['jointcolor'])
@@ -590,7 +580,7 @@ class Entoform():
 							colour.applyColorToVertex(v, vec)
 					else:
 						selVerts.extend(p.vertices)
-						outPolygons.append(p)
+						outPolygons.append(p.index)
 						colour.applyColorToPolygon(p.index, vec)
 						
 			# Lets make some sharp edges
@@ -608,12 +598,14 @@ class Entoform():
 						snd = 0
 						
 						# See how many polygons this edge is part of
-						for p in outPolygons:
+						for pIn in outPolygons:
+							p = self.me.polygons[pIn]
 							if v0 in p.vertices and v1 in p.vertices:
 								ond += 1
 								
-						for p in selPolygons:
-							if not p in outPolygons:
+						for pIn in selPolygons:
+							if not pIn in outPolygons:
+								p = self.me.polygons[pIn]
 								if v0 in p.vertices and v1 in p.vertices:
 									snd += 1
 								
@@ -635,10 +627,6 @@ class Entoform():
 							if pole == 4 and sharp < 2:
 								e.use_edge_sharp = True
 							'''
-						
-			# Set the selection of polygons back to the original
-			for p in selPolygons:
-				p.select = True
 				
 					
 					
@@ -854,6 +842,7 @@ class Entoform():
 						nuCnt = len(selPolygons)
 						
 					# Check for opposing normals.. .cause they should not be there!
+					'''
 					for f1 in selPolygons:
 						if f1.select:
 							f1No = f1.normal
@@ -864,7 +853,7 @@ class Entoform():
 									if ang > math.radians(120):
 										f1.select = False
 										break
-					
+					'''
 					selPolygons = mesh_extras.get_selected_polygons()
 					nuCnt = len(selPolygons)
 						
@@ -909,7 +898,6 @@ class Entoform():
 			
 		for m in addMatrices:
 			growmatrices.append(m)
-			
 		
 		formmatrix = mesh_extras.get_selection_matrix(polygons)
 		
@@ -939,12 +927,14 @@ class Entoform():
 				
 		# Make sure there's never more than 12 polygons we grow out of
 		if selection['area'] == 'polygons':
-			select_polygons.limit(selection['limit'], self.dnaString)
+			#select_polygons.limit(selection['limit'], self.dnaString)
+			select_bmesh_faces.go(mode='LIMIT', key=self.dnaString)
 			
 		# If we still have something selected, then we need to check for Islands (only one coninuous island should be selected)
-		if selection['type'] == 'direction' and selection['area'] == 'area' and mesh_extras.contains_selected_item(self.me.polygons):
-			self.checkForIslands(selection['vector'])
-
+		if selection['type'] == 'direction' and selection['area'] == 'area':
+			
+			#self.checkForIslands(selection['vector'])
+			select_bmesh_faces.go(mode='ISLAND')
 			
 	
 	
