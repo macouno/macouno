@@ -138,8 +138,6 @@ class Entoform():
 		# Temporary halt!
 		#return
 		
-		
-		
 		idText = 'limb '+misc.nr4(string['number'])+' '+string['name'].ljust(10, ' ')
 		print(pad,idText)
 		
@@ -181,8 +179,9 @@ class Entoform():
 				# Select a group
 				select_bmesh_faces.go(mode='GROUPED', group=group.index)
 				
-				mesh_extras.smooth_selection()
+				#print('sel-',len(mesh_extras.get_selected_polygons()),group.name)
 				
+				mesh_extras.smooth_selection()
 
 				# No need to continue if we have no selected polygons
 				if not mesh_extras.contains_selected_item(self.me.polygons):
@@ -248,22 +247,29 @@ class Entoform():
 								debug=False,
 								)
 							
-						#print('0')
 						select_bmesh_faces.go(mode='GROUPED', group=group.index)
-						#print('2')
+						
 						bpy.ops.object.mode_set(mode='OBJECT')
-						#print('3')
+						
 						self.applyGrowthColor(action)
 						# RESELECT GROUPED...
 						select_bmesh_faces.go(mode='GROUPED', group=group.index)
-						#print('4')
+						
 						if action['type'] == 'grow':
 							self.applyGrowthCrease(action)
-						#select_bmesh_faces.go(mode='GROUPED', group=group.index)
-						#print('%')
+						
+						#select_bmesh_faces.go(mode='GROUPED', group=0)
+						#print('pre-',len(mesh_extras.get_selected_polygons()),group.name)
+						
+						select_bmesh_faces.go(mode='GROUPED', group=group.index)
+						
 						# Remove new stuff from all but the current group
 						self.cleanGroup(group)
-						#print('PASSED - 5')
+						
+						#select_bmesh_faces.go(mode='GROUPED', group=0)
+						#print('post',len(mesh_extras.get_selected_polygons()))
+						
+						select_bmesh_faces.go(mode='GROUPED', group=group.index)
 						# Keep track of how much steps we've taken
 						self.dnaStep += 1
 						
@@ -389,11 +395,11 @@ class Entoform():
 		
 		self.dna['strings'][1]['strings'].append(string)
 		self.stringCount += 1
-		
+		'''
 		# Mirror the legs
 		string = self.mirrorDNA(action, selection, 3)
 		self.dna['strings'][1]['strings'].append(string)
-		
+		'''
 		
 		'''
 		# Lower legs
@@ -520,7 +526,7 @@ class Entoform():
 		return action
 		
 		
-		
+	'''
 	# Set the intensity for a vector
 	def applyIntensity(self, vector, intensity, mode):
 	
@@ -542,7 +548,7 @@ class Entoform():
 					vector[i] = 1.0 - ((1.0 - v) * intensity)
 		
 		return vector
-		
+	'''
 		
 		
 	# Apply a vertex colour to a vertex group
@@ -631,8 +637,8 @@ class Entoform():
 							'''
 						
 			# Set the selection of polygons back to the original
-			#for p in selPolygons:
-			#	p.select = True
+			for p in selPolygons:
+				p.select = True
 				
 					
 					
@@ -680,7 +686,7 @@ class Entoform():
 			'type': 'direction',
 			'area': 'area',
 			'vector': mathutils.Vector(),
-			'divergence': math.radians(45),
+			'divergence': math.radians(90),
 			'method': 'generated'
 			}
 		
@@ -769,12 +775,9 @@ class Entoform():
 		
 	# Remove the items in the current group from all others
 	def cleanGroup(self, group):
-			
-		#print('y')
-		select_bmesh_faces.go(mode='GROUPED', group=group.index)
-		#print('z')
-		select_bmesh_faces.go(mode='OUTER', invert=True)
 		
+		select_bmesh_faces.go(mode='GROUPED', group=group.index)
+		select_bmesh_faces.go(mode='OUTER', invert=True)
 		
 		# Make sure the entire group is selected
 		#bpy.ops.mesh.select_all(action='DESELECT')
@@ -796,7 +799,8 @@ class Entoform():
 				self.ob.vertex_groups.active_index = g.index
 				bpy.ops.object.vertex_group_remove_from(use_all_groups=False, use_all_verts=False)
 				#bpy.ops.object.vertex_group_remove_from(all=False)
-		
+				
+		self.ob.vertex_groups.active_index = group.index
 		bpy.ops.object.mode_set(mode='OBJECT')
 		
 		
@@ -816,9 +820,10 @@ class Entoform():
 				e = False
 			else:
 				e = True
+			print('base',g.name)
 			select_bmesh_faces.go(mode='GROUPED', extend=e, group=g.index)
 			
-		#print('in_group',len(mesh_extras.get_selected_polygons()))
+		print('in_group',len(mesh_extras.get_selected_polygons()))
 			
 		# If nothing is selected there's nothing to do
 		if mesh_extras.contains_selected_item(self.me.polygons):
@@ -875,7 +880,7 @@ class Entoform():
 
 				select_bmesh_faces.go(mode='DIRECTIONAL', direction=selection['vector'],limit=selection['divergence'])
 				
-				#print('done selecting', len(mesh_extras.get_selected_polygons()),'polys in',selection['vector'],selection['divergence'])
+				#print('done selecting', len(mesh_extras.get_selected_polygons()),'polys in',selection['vector'],math.degrees(selection['divergence']))
 				
 				newGroups, formmatrix, growmatrices = self.addToNewGroups(string, newGroups, growmatrices)
 				
@@ -885,70 +890,6 @@ class Entoform():
 				
 		return newGroups, formmatrix, growmatrices
 		
-		
-	
-		
-	# Deselect all polygons that are already grouped, but not in the baseGroups
-	def deselectGrouped(self, baseGroups):
-	
-		# Get the polygons (and go into object mode)
-		polygons = mesh_extras.get_selected_polygons()
-		
-		if len(polygons):
-						
-			# First lets make sure the polygons are in the current base groups
-			for g in baseGroups:
-			
-				# Check all selected polygons
-				for p in polygons:
-					if p.select:
-					
-						inGroup = True
-						
-						# See all the verts (all should be in the group!)
-						for v in p.vertices:
-						
-							found = False
-							vert = self.ob.data.vertices[v]
-							vertGroups = vert.groups
-							for vg in vert.groups:
-								if vg.group == g.index:
-									found = True
-							
-							if not found:
-								inGroup = False
-								
-						if not inGroup:
-							p.select = False
-						
-			polygons = mesh_extras.get_selected_polygons()
-			
-			if len(polygons):
-	
-				for g in self.newGroups:
-					if not g in baseGroups:
-						
-						# Check all selected polygons
-						for p in polygons:
-							if p.select:
-							
-								inGroup = True
-								
-								# See all the verts (all should be in the group!)
-								for v in p.vertices:
-								
-									found = False
-									vert = self.ob.data.vertices[v]
-									vertGroups = vert.groups
-									for vg in vert.groups:
-										if vg.group == g.index:
-											found = True
-									
-									if not found:
-										inGroup = False
-										
-								if inGroup:
-									p.select = False
 				
 		
 		
@@ -1280,7 +1221,7 @@ class Entoform():
 		self.options['bool'] = {'a': True,'b': False}
 		
 		self.options['primary'] = {
-			'translate': {'min': 2.0, 'max': 5.0},
+			'translate': {'min': 4.0, 'max': 10.0},
 			'scale': {'min': 0.4, 'max': 0.7},
 			'crease': {'min': 0.4, 'max': 0.7},
 			'bumpscale': {'min': 0.4, 'max': 0.7},
@@ -1291,7 +1232,7 @@ class Entoform():
 			}
 			
 		self.options['secondary'] = {
-			'translate': {'min': -0.5, 'max': 1.5},
+			'translate': {'min': -1.0, 'max': 2.0},
 			'scale': {'min': -0.3, 'max': 0.3},
 			'crease': {'min': -0.3, 'max': 0.3},
 			'bumpscale': {'min': -0.35, 'max': 0.3},
@@ -1545,7 +1486,7 @@ class Entoform_init(bpy.types.Operator):
 	bl_options = {'REGISTER', 'UNDO'}
 	
 	d='Selina'
-	limit = 4
+	limit = 3
 
 	dnaString = StringProperty(name="DNA", description="DNA string to define your shape", default=d, maxlen=100)
 	
