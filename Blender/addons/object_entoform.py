@@ -128,6 +128,10 @@ class Entoform():
 		# Temporary halt!
 		#return
 		
+		#if string['number'] == (self.steplimit-1):
+		#	print(pad,' # Reached steplimit',self.steplimit,'>> RETURNING')
+		#	return
+		
 		idText = 'limb '+misc.nr4(string['number'])+' '+string['name'].ljust(10, ' ')
 		print(pad,idText)
 		
@@ -385,11 +389,11 @@ class Entoform():
 		
 		self.dna['strings'][1]['strings'].append(string)
 		self.stringCount += 1
-		'''
+		
 		# Mirror the legs
 		string = self.mirrorDNA(action, selection, 3)
 		self.dna['strings'][1]['strings'].append(string)
-		'''
+		
 		
 		'''
 		# Lower legs
@@ -661,7 +665,7 @@ class Entoform():
 						intersection = [v for v in e.vertices if v in selVerts]
 						
 						if len(intersection) == 1 and e.crease < 1.0:
-							#print('set crease',vec)
+							print('set crease',vec)
 							e.crease = vec
 
 		#print('finished setting crease', vec)
@@ -808,10 +812,10 @@ class Entoform():
 				e = False
 			else:
 				e = True
-			print('base',g.name)
+			#print('base',g.name)
 			select_bmesh_faces.go(mode='GROUPED', extend=e, group=g.index)
 			
-		print('in_group',len(mesh_extras.get_selected_polygons()))
+		#print('in_group',len(mesh_extras.get_selected_polygons()))
 			
 		# If nothing is selected there's nothing to do
 		if mesh_extras.contains_selected_item(self.me.polygons):
@@ -1476,7 +1480,7 @@ class Entoform_init(bpy.types.Operator):
 	bl_options = {'REGISTER', 'UNDO'}
 	
 	d='Selina'
-	limit = 3
+	limit = 0
 
 	dnaString = StringProperty(name="DNA", description="DNA string to define your shape", default=d, maxlen=100)
 	

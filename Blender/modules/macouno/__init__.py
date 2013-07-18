@@ -28,6 +28,7 @@ __all__ = (
     "group_extras",
     "liberty",
     "mesh_extras",
+    "bmesh_extras",
     "misc",
     "select_bmesh_faces",
     )

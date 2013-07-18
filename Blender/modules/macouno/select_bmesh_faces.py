@@ -1,61 +1,7 @@
 import bpy, mathutils, bmesh
-from macouno import mesh_extras
+from macouno import bmesh_extras
 
-
-# Get the bmesh data from the current mesh object
-def get_bmesh():
 	
-	# Get the active mesh
-	ob = bpy.context.object
-	me = ob.data
-	
-	sel = 0
-	for f in me.polygons:
-		if f.select:
-			sel += 1
-
-	# Get a BMesh representation
-	if ob.mode == 'OBJECT':
-		#print('ob')
-		bm = bmesh.new()
-		#print('ob 2',me, len(me.vertices), sel)
-		#bm.from_object(ob, bpy.context.scene)
-		bm.from_mesh(me)   # fill it in from a Mesh
-		#print('ob 3')
-	else:
-		#print('ed')
-		bm = bmesh.from_edit_mesh(me) # Fill it from edit mode mesh
-	
-	return bm
-	
-	
-	
-# Put the bmesh data back into the current mesh object
-def put_bmesh(bm):
-	
-	# Get the active mesh
-	ob = bpy.context.object
-	me = ob.data
-	
-	# Flush selection
-	bm.select_flush_mode() 
-	
-	# Finish up, write the bmesh back to the mesh
-	if ob.mode == 'OBJECT':
-		#print('ob 4')
-		bm.to_mesh(me)
-		#print('ob 5')
-		bm.free()
-		#print('ob 6')
-	else:
-		bmesh.update_edit_mesh(me, True)
-	
-	
-	
-# Get a list of all selected faces
-def get_selected(bm):
-	return [f for f in bm.faces if f.select]
-
 	
 	
 # Select all
@@ -81,7 +27,7 @@ def none(bm):
 # Select the innermost faces of your current selection
 def inner(bm):
 
-	selFaces = get_selected(bm)
+	selFaces = bmesh_extras.get_selected(bm)
 	
 	# no need to continue if there are no selected faces
 	if len(selFaces):
@@ -127,7 +73,7 @@ def inner(bm):
 # Select the outermost faces of your current selection
 def outer(bm, invert=False):
 	#print('x outer start')
-	selFaces = get_selected(bm)
+	selFaces = bmesh_extras.get_selected(bm)
 	selLen = len(selFaces)
 	
 	# no use continueing if there's no selection
@@ -227,6 +173,8 @@ def directional(bm, extend=False, direction=(0.0,0.0,1.0), limit=1.57):
 	# Make sure the direction is a vector object
 	direction = mathutils.Vector(direction)
 	
+	selLen = bmesh_extras.has_selected(bm)
+	
 	# Make sure the direction has a length
 	if direction.length:
 	
@@ -243,10 +191,14 @@ def directional(bm, extend=False, direction=(0.0,0.0,1.0), limit=1.57):
 				angle = 0.0
 				
 			# Check against the limit
-			if angle <= limit:
+			if not selLen and angle <= limit:
 				f.select_set(True)
-			elif f.select and not extend:
-				f.select_set(False)
+			elif selLen:
+				if f.select and not extend and angle > limit:
+					f.select_set(False)
+				elif not f.select and extend and angle <= limit:
+					f.select_set(True)
+			
 	
 	return bm
 	
@@ -288,14 +240,16 @@ def get_connected(conFaces, checkFaces, face):
 	
 	return conFaces, checkFaces
 	
+	
+	
 # Make sure there's no multiple islands selected
 def island_check(bm):
 	
-	selFaces = get_selected(bm)
+	selFaces = bmesh_extras.get_selected(bm)
 
 	if len(selFaces):
 
-		checkFaces = get_selected(bm)
+		checkFaces = bmesh_extras.get_selected(bm)
 
 		biggestLen = False
 		biggestCon = False
@@ -325,7 +279,7 @@ def island_check(bm):
 # INITIATE >>> This way we don't have to do the same thing over and over
 def go(mode='ALL', invert=False, extend=False, group=0, direction=(0.0,0.0,1.0), limit=1.57, key=''):
 	
-	bm = get_bmesh()
+	bm = bmesh_extras.get_bmesh()
 	
 	if mode == 'ALL':
 		bm = all(bm)
@@ -354,4 +308,4 @@ def go(mode='ALL', invert=False, extend=False, group=0, direction=(0.0,0.0,1.0),
 	elif mode == 'ISLAND':
 		bm = island_check(bm)
 
-	put_bmesh(bm)
+	bmesh_extras.put_bmesh(bm)
