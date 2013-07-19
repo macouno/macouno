@@ -46,20 +46,27 @@ Additional links:
 """
 
 import bpy, mathutils, math
-from bpy.props import EnumProperty, BoolProperty, FloatProperty
+from bpy.props import EnumProperty, BoolProperty, FloatProperty, StringProperty
 from macouno import select_polygons, mesh_extras, misc, falloff_curve
 
 # Bump stuff!
 class Cast_Loop():
 
 	# Initialise the class
-	def __init__(self, context, shape,scale,scale_falloff):
+	def __init__(self, context, shape,scale,scale_falloff, corner_group):
 	
 		self.ob = context.active_object
 		self.me = self.ob.data
 		self.scale = scale
 		self.scale_falloff = scale_falloff
 		
+		# Get/make a corner group vertex group
+		if corner_group:
+			try:
+				corner_group = self.ob.vertex_groups[corner_group]
+			except:
+				corner_group = self.ob.vertex_groups.new(corner_group)
+				
 		bpy.ops.object.mode_set(mode='OBJECT')
 				
 		# Now only the outer loop
@@ -170,6 +177,12 @@ class Cast_Loop():
 		self.doneEdges = []
 		self.stepRound(v1in,v1co,(step))
 		
+		# If we make a circle, we don't want any of the verts in the corner group
+		if shape == 'CIR':
+			for v in self.oVerts:
+				if corner_group: corner_group.remove([v.index])
+						
+		
 		if shape != 'CIR':
 			
 			# lets try putting them in a triangle
@@ -184,7 +197,6 @@ class Cast_Loop():
 			
 			aLine = False
 			
-			
 			self.currentX = 0.0
 			self.vec = self.scale
 			self.factor = 1.0
@@ -198,11 +210,13 @@ class Cast_Loop():
 				# Get a normalized version of the current relative position
 				line = mathutils.Vector(v.co - self.cent).normalized()
 				
-				# Get the starting line as a reference
+				# Get the starting line as a reference (is also a corner
 				if not aLine:
 					aLine = line
 					self.currentX = 0.0
 					self.factor = 1.0
+					
+					if corner_group: corner_group.add([v.index], 1.0, 'REPLACE')
 					
 				else:
 				
@@ -211,6 +225,8 @@ class Cast_Loop():
 					
 					# If the angle is bigger than a step, we make this the new start
 					if cAng > math.radians(c):
+					
+						if corner_group: corner_group.add([v.index], 1.0, 'REPLACE')
 						
 						# Make sure the angle is correct!
 						line =  misc.rotate_vector_to_vector(line, aLine, math.radians(c))
@@ -221,8 +237,12 @@ class Cast_Loop():
 						self.factor = 1.0
 					
 					# These should all be midpoints along the line!
+					# make sure we don't do the last one... because it's the first one!
 					else:
 					
+						# Remove non corner items from the corner group
+						if corner_group: corner_group.remove([v.index])
+						
 						# Only if we have to scale and the line isn't straight!
 						if self.scale != 1.0 and self.scale_falloff != 'STR':
 						
@@ -240,7 +260,6 @@ class Cast_Loop():
 							
 							self.currentX = self.newX
 							
-						
 						# Find the corner of the new triangle
 						b = 180 - (a+math.degrees(cAng))
 						
@@ -277,7 +296,8 @@ class Cast_Loop():
 				v2 = self.me.vertices[v2in]
 				
 				# Add to the list of ordered verts!
-				self.oVerts.append(v2)
+				if not v2 in self.oVerts:
+					self.oVerts.append(v2)
 				
 				v2co = v2.co - self.cent
 				
@@ -338,13 +358,15 @@ class Cast_Loop_init(bpy.types.Operator):
 		
 	scale_falloff = EnumProperty(items=falloffs, name='Falloff', description='The falloff of the scale', default='STR')
 	
+	corner_group = StringProperty(name="Corner Group", description="Name of the group to add corners to if there are any", default='', maxlen=100)
+	
 	@classmethod
 	def poll(cls, context):
 		obj = context.active_object
 		return (obj and obj.type == 'MESH')
 
 	def execute(self, context):
-		Cast = Cast_Loop(context, self.shape,self.scale,self.scale_falloff) 
+		Cast = Cast_Loop(context, self.shape,self.scale,self.scale_falloff, self.corner_group) 
 		return {'FINISHED'}
 
 		

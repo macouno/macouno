@@ -1,6 +1,5 @@
 import bpy, mathutils, bmesh
 from macouno import bmesh_extras
-
 	
 	
 	
@@ -25,7 +24,7 @@ def none(bm):
 
 	
 # Select the innermost faces of your current selection
-def inner(bm):
+def inner(bm, invert=False):
 
 	selFaces = bmesh_extras.get_selected(bm)
 	
@@ -65,6 +64,14 @@ def inner(bm):
 							break
 					if found:
 						break
+		
+		# Invert the selection!
+		if invert:
+			for f in selFaces:
+				if f.select:
+					f.select_set(False)
+				else:
+					f.select_set(True)
 
 	return bm
 	
@@ -143,7 +150,7 @@ def connected(bm, extend=False):
 # SELECT ALL IN A VERTEX GROUP (takes the group iindex)
 def grouped(bm, extend=False, group=0):
 
-	gi = bpy.context.active_object.vertex_groups.active_index
+	#gi = bpy.context.active_object.vertex_groups.active_index
 	
 	# only ever one deform weight layer
 	dvert_lay = bm.verts.layers.deform.active
@@ -288,7 +295,7 @@ def go(mode='ALL', invert=False, extend=False, group=0, direction=(0.0,0.0,1.0),
 		bm = none(bm)
 
 	elif mode == 'INNER':
-		bm = inner(bm)
+		bm = inner(bm, invert)
 
 	elif mode == 'OUTER':
 		bm = outer(bm, invert)

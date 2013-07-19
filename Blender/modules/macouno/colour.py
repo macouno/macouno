@@ -137,6 +137,8 @@ def get_palettes(days=1, type='NEW'):
 	# listType can be newest, rating, popular, timespan=0 = all
 	url_info = urllib.request.urlopen('http://kuler-api.adobe.com//feeds/rss/get.cfm?timeSpan='+str(days)+'&listType='+listType)
 		
+	print(url_info)
+		
 	xmldoc = minidom.parse(url_info)
 
 	rootNode = xmldoc.documentElement

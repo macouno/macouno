@@ -56,7 +56,7 @@ else:
 import bpy, mathutils, math, cProfile, colorsys, datetime, time
 from mathutils import geometry
 from bpy.props import StringProperty, IntProperty, BoolProperty
-from macouno import mesh_extras, misc, colour, select_bmesh_faces, falloff_curve, liberty
+from macouno import mesh_extras, misc, colour, select_bmesh_faces, falloff_curve, liberty, bmesh_extras
 
 # Make it as a class
 class Entoform():
@@ -137,7 +137,7 @@ class Entoform():
 		
 		# only if we made a group with something in it do we continue
 		if not groupLen:
-			print('  - No group!')
+			print(pad,' ### No group!')
 		else:
 				
 			# Loop through all the groups
@@ -218,8 +218,10 @@ class Entoform():
 						#return
 						
 						# Cast the selection to the correct shape please
-						bpy.ops.mesh.cast_loop(shape=action['loop_shape'], scale=1, scale_falloff='STR')
+						bpy.ops.mesh.cast_loop(shape=action['loop_shape'], scale=1, scale_falloff='STR', corner_group='corner')
 						
+						self.ob['growmatrix'] = mesh_extras.get_selection_matrix()
+
 						if action['type'] == 'bump':
 						
 							bpy.ops.mesh.bump(
@@ -249,11 +251,7 @@ class Entoform():
 						# RESELECT GROUPED...
 						select_bmesh_faces.go(mode='GROUPED', group=group.index)
 						
-						if action['type'] == 'grow':
-							self.applyGrowthCrease(action)
-						
-						#select_bmesh_faces.go(mode='GROUPED', group=0)
-						#print('pre-',len(mesh_extras.get_selected_polygons()),group.name)
+						bmesh_extras.crease_edges(sharpness=action['crease'], group='corner')						
 						
 						select_bmesh_faces.go(mode='GROUPED', group=group.index)
 						
@@ -361,7 +359,7 @@ class Entoform():
 		self.stringCount += 1
 		
 		
-		'''
+		
 		# Make a tail!
 		print("\n - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n")
 		print((self.stringCount+1),"Making nr",(self.stringCount+1),"DNA string for the tail\n")
@@ -373,7 +371,7 @@ class Entoform():
 		
 		self.dna['strings'][1]['strings'].append(string)
 		self.stringCount += 1
-		'''
+		
 		
 		
 		# Make some legs (well hopefully)
@@ -391,11 +389,12 @@ class Entoform():
 		self.stringCount += 1
 		
 		# Mirror the legs
-		string = self.mirrorDNA(action, selection, 3)
-		self.dna['strings'][1]['strings'].append(string)
+		if True:
+			string = self.mirrorDNA(action, selection, 3)
+			self.dna['strings'][1]['strings'].append(string)
 		
 		
-		'''
+		
 		# Lower legs
 		print("\n - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n")
 		print((self.stringCount+1),"Making nr",(self.stringCount+1),"DNA string for the lower legs\n")
@@ -408,10 +407,12 @@ class Entoform():
 		self.dna['strings'][1]['strings'][len(self.dna['strings'][1]['strings'])-1]['strings'].append(string)
 		self.stringCount += 1
 		
-		string = self.mirrorDNA(action, selection, 3)
-		self.dna['strings'][1]['strings'][1]['strings'].append(string)
+		#Mirror the lower legs (set to false to stop... yay)
+		if True:
+			string = self.mirrorDNA(action, selection, 3)
+			self.dna['strings'][1]['strings'][1]['strings'].append(string)
 		
-		
+		'''
 		
 		# SUB body!
 		print("\n - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n")
@@ -632,43 +633,6 @@ class Entoform():
 								e.use_edge_sharp = True
 							'''
 				
-					
-					
-	def applyGrowthCrease(self, action):
-		
-		# LETS LOOK AT CREASES!
-		vec = action['crease']
-		#print('setting crease', vec)
-		
-		# Now we want to find out how many steps we made
-		steps = self.ob['growsteps']
-		if steps:
-			
-			# Loop through all the steps
-			for i in range(int(steps)):
-				
-				select_bmesh_faces.go(mode='OUTER', invert=True)		
-				
-				# Find all the selected vertices
-				selPolygons = mesh_extras.get_selected_polygons()
-				if len(selPolygons):
-					selVerts = []
-					for f in selPolygons:
-						selVerts.extend(f.vertices)
-					
-					# Loop through all edges
-					for e in self.me.edges:
-					
-						eVerts = e.vertices
-						
-						# If an edge has only 1 selected vert... it's "long" and on the outside of the selection
-						intersection = [v for v in e.vertices if v in selVerts]
-						
-						if len(intersection) == 1 and e.crease < 1.0:
-							print('set crease',vec)
-							e.crease = vec
-
-		#print('finished setting crease', vec)
 	
 	
 	# Make a section type for the dna string	
@@ -678,7 +642,7 @@ class Entoform():
 			'type': 'direction',
 			'area': 'area',
 			'vector': mathutils.Vector(),
-			'divergence': math.radians(90),
+			'divergence': math.radians(45),
 			'method': 'generated'
 			}
 		
@@ -687,9 +651,11 @@ class Entoform():
 
 			if type == 'head':
 				selection['vector'] = mathutils.Vector((0.0,-1.0,0.0))
+				selection['divergence'] = math.radians(90)
 				
 			elif type == 'body' or type == 'tail':
 				selection['vector'] = mathutils.Vector((0.0,1.0,0.0))
+				selection['divergence'] = math.radians(90)
 				
 			elif type == 'legs':
 				selection['vector'] = mathutils.Vector((1.0,0.0,0.0))
@@ -787,7 +753,7 @@ class Entoform():
 		bpy.ops.object.mode_set(mode='EDIT')
 		
 		for g in self.newGroups:
-			if g.index != group.index:
+			if g.index != group.index and g.name != 'corner':
 				self.ob.vertex_groups.active_index = g.index
 				bpy.ops.object.vertex_group_remove_from(use_all_groups=False, use_all_verts=False)
 				#bpy.ops.object.vertex_group_remove_from(all=False)
@@ -824,14 +790,19 @@ class Entoform():
 			if selection['type'] == 'joint':
 			
 				select_bmesh_faces.go(mode='INNER')
+				
+				#print('1, selected',len(mesh_extras.get_selected_polygons()),mesh_extras.contains_selected_item(self.me.polygons))
 					
 				if mesh_extras.contains_selected_item(self.me.polygons):
 					
-					return newGroups, formmatrix, growmatrices
+					#return newGroups, formmatrix, growmatrices
 					
 					# Select connected twice to make sure we have enough now that selection is doubled
 					select_bmesh_faces.go(mode='CONNECTED', extend=True)
-					#select_bmesh_faces.go(mode='CONNECTED', extend=True)
+					select_bmesh_faces.go(mode='CONNECTED', extend=True)
+					#select_bmesh_faces.go(mode='INNER', invert=True)
+					
+					#print('2, selected',len(mesh_extras.get_selected_polygons()))
 					
 					selCnt = len(mesh_extras.get_selected_polygons())
 					nuCnt = selCnt
@@ -839,9 +810,9 @@ class Entoform():
 					
 					# If the nr of polygons selected isn't diminished... we select less!
 					while selCnt and selCnt == nuCnt and div > 0.1:
-					
+						print('div',math.degrees(div))
 						select_bmesh_faces.go(mode='DIRECTIONAL', direction=selection['vector'], limit=div)
-						div = div * 0.75
+						div = div * 0.5
 						selPolygons = mesh_extras.get_selected_polygons()
 						nuCnt = len(selPolygons)
 						
@@ -860,6 +831,8 @@ class Entoform():
 					'''
 					selPolygons = mesh_extras.get_selected_polygons()
 					nuCnt = len(selPolygons)
+					
+					print('joint',nuCnt)
 						
 					if nuCnt == selCnt:
 						select_bmesh_faces.go(mode='NONE')
@@ -894,7 +867,7 @@ class Entoform():
 		
 		polygons = mesh_extras.get_selected_polygons()
 		
-		addGroups, addMatrices = mesh_extras.group_selection(area = selection['area'], name=string['name'],chunkProduct=2)
+		addGroups, addMatrices = mesh_extras.group_selection(area = selection['area'], name=string['name'],chunkProduct=4)
 		
 		for g in addGroups:
 			newGroups.append(g)
