@@ -199,82 +199,71 @@ class Entoform():
 					
 						# Add relative intensity here (half the original + half the weight)
 						weight = baseWeight * self.getWeight(groupLen, action['scalin'])
-						
-						trans = action['translation']
-						#trans = self.applyIntensity(a['translation'], weight, 'float')
-						#rot = self.applyIntensity(rot, weight, 'inc')
 					
-					if action['type'] == 'grow' and trans == 0.0:
+					print(pad,'step ',stepText,action['name'])
+
+					# Go into edit mode to cast and grow
+					bpy.ops.object.mode_set(mode='EDIT')
 					
-						print(pad,'skip ',stepText,'too short',trans,'from',action['translation'])
+					# Cast the selection to the correct shape please
+					bpy.ops.mesh.cast_loop(shape=action['loop_shape'], scale=1, scale_falloff='STR', corner_group='corner')
 					
+					# Since the matrix changes after casting... we acquire a fresh one now
+					self.ob['growmatrix'] = mesh_extras.get_selection_matrix()
+
+					if action['type'] == 'bump':
+					
+						bpy.ops.mesh.bump(
+							type=action['bumptype'],
+							scale=action['bumpscale'],
+							steps=True,
+							)
+							
 					else:
 					
-						print(pad,'step ',stepText,action['name'])
-						#print(self.applyIntensity(a['push'], weight, 'float'))
+						bpy.ops.mesh.grow(
+							translation=action['translation'],
+							rotation=rot,
+							rotation_falloff=action['rotation_falloff'],
+							scale=action['scale'],
+							scale_falloff=action['scale_falloff'],
+							retain=True,
+							steps=True,
+							debug=False,
+							)
+						
+					select_bmesh_faces.go(mode='GROUPED', group=group.index)
+					
+					bpy.ops.object.mode_set(mode='OBJECT')
+					
+					self.applyGrowthColor(action)
+					# RESELECT GROUPED...
+					select_bmesh_faces.go(mode='GROUPED', group=group.index)
+					
+					bmesh_extras.crease_edges(sharpness=action['crease'], group='corner')						
+					
+					select_bmesh_faces.go(mode='GROUPED', group=group.index)
+					
+					# Remove new stuff from all but the current group
+					self.cleanGroup(group)
+					
+					#select_bmesh_faces.go(mode='GROUPED', group=0)
+					#print('post',len(mesh_extras.get_selected_polygons()))
+					
+					select_bmesh_faces.go(mode='GROUPED', group=group.index)
+					# Keep track of how much steps we've taken
+					self.dnaStep += 1
+					
+					# Redraw hack to see what is happening
+					#bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
 
-						bpy.ops.object.mode_set(mode='EDIT')
-
-						#return
-						
-						# Cast the selection to the correct shape please
-						bpy.ops.mesh.cast_loop(shape=action['loop_shape'], scale=1, scale_falloff='STR', corner_group='corner')
-						
-						self.ob['growmatrix'] = mesh_extras.get_selection_matrix()
-
-						if action['type'] == 'bump':
-						
-							bpy.ops.mesh.bump(
-								type=action['bumptype'],
-								scale=action['bumpscale'],
-								steps=True,
-								)
-								
-						else:
-						
-							bpy.ops.mesh.grow(
-								translation=trans,
-								rotation=rot,
-								rotation_falloff=action['rotation_falloff'],
-								scale=action['scale'],
-								scale_falloff=action['scale_falloff'],
-								retain=True,
-								steps=True,
-								debug=False,
-								)
-							
-						select_bmesh_faces.go(mode='GROUPED', group=group.index)
-						
-						bpy.ops.object.mode_set(mode='OBJECT')
-						
-						self.applyGrowthColor(action)
-						# RESELECT GROUPED...
-						select_bmesh_faces.go(mode='GROUPED', group=group.index)
-						
-						bmesh_extras.crease_edges(sharpness=action['crease'], group='corner')						
-						
-						select_bmesh_faces.go(mode='GROUPED', group=group.index)
-						
-						# Remove new stuff from all but the current group
-						self.cleanGroup(group)
-						
-						#select_bmesh_faces.go(mode='GROUPED', group=0)
-						#print('post',len(mesh_extras.get_selected_polygons()))
-						
-						select_bmesh_faces.go(mode='GROUPED', group=group.index)
-						# Keep track of how much steps we've taken
-						self.dnaStep += 1
-						
-						# Redraw hack to see what is happening
-						#bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
-
-						# If there's a sub
-						if len(string['strings']):
-							for s in string['strings']:
-								if s['number'] < self.steplimit or not self.steplimit:
-									#print('going sub', string['name'], s['name'])
-									self.executeDNA(s, [group], weight)
-		
+					# If there's a sub string and we're allowed deeper... lets do that
+					if len(string['strings']):
+						for s in string['strings']:
+							if s['number'] < self.steplimit or not self.steplimit:
+								#print('going sub', string['name'], s['name'])
+								self.executeDNA(s, [group], weight)
+	
 		
 	def createDNA(self):
 	
@@ -388,13 +377,7 @@ class Entoform():
 		self.dna['strings'][1]['strings'].append(string)
 		self.stringCount += 1
 		
-		# Mirror the legs
-		if True:
-			string = self.mirrorDNA(action, selection, 3)
-			self.dna['strings'][1]['strings'].append(string)
-		
-		
-		
+		# First make lower legs (BEFORE MIRRORING!)
 		# Lower legs
 		print("\n - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n")
 		print((self.stringCount+1),"Making nr",(self.stringCount+1),"DNA string for the lower legs\n")
@@ -404,14 +387,21 @@ class Entoform():
 		#action['translation'] *= 2
 		
 		string = {'name':'lower legs', 'action':action, 'selection':selection, 'strings':[], 'level':3,'number':self.stringCount}
-		self.dna['strings'][1]['strings'][len(self.dna['strings'][1]['strings'])-1]['strings'].append(string)
-		self.stringCount += 1
+		self.dna['strings'][1]['strings'][1]['strings'].append(string)
+		self.stringCount += 1		
+		
+		'''
+		# Mirror the legs
+		if True:
+			string = self.mirrorDNA(action, selection, 3)
+			self.dna['strings'][1]['strings'].append(string)
+
 		
 		#Mirror the lower legs (set to false to stop... yay)
 		if True:
 			string = self.mirrorDNA(action, selection, 3)
 			self.dna['strings'][1]['strings'][1]['strings'].append(string)
-		
+		'''
 		'''
 		
 		# SUB body!
@@ -810,12 +800,15 @@ class Entoform():
 					
 					# If the nr of polygons selected isn't diminished... we select less!
 					while selCnt and selCnt == nuCnt and div > 0.1:
-						print('div',math.degrees(div))
+						
 						select_bmesh_faces.go(mode='DIRECTIONAL', direction=selection['vector'], limit=div)
-						div = div * 0.5
+						
 						selPolygons = mesh_extras.get_selected_polygons()
 						nuCnt = len(selPolygons)
 						
+						print('join selection at',math.degrees(div), nuCnt)
+						
+						div = div * 0.5
 					# Check for opposing normals.. .cause they should not be there!
 					'''
 					for f1 in selPolygons:
