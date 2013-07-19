@@ -82,8 +82,6 @@ class Grow():
 		# Go into object mode for the initial stages
 		bpy.ops.object.mode_set(mode='OBJECT')
 		self.averageLength = mesh_extras.get_average_outer_edge_length()
-		translation *= self.averageLength
-		
 		# Now this is an added bit only for use with entoform.py
 		
 		# This matrix may already be set by a previous grow function running making this shape (just being consistent)

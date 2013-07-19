@@ -356,14 +356,20 @@ def get_selected_edges(mode='selected'):
 
 	
 # Get all the selected polygons (mode is selected or deselected)
-def get_selected_polygons(mode='selected'):
+def get_selected_polygons(mode='selected', type='polys'):
 	
 	polygons = bpy.context.active_object.data.polygons
 	
-	if mode == 'deselected':
-		L = [p for p in polygons if not p.select]
+	if type == 'polys':
+		if mode == 'deselected':
+			L = [p for p in polygons if not p.select]
+		else:
+			L = [p for p in polygons if p.select]
 	else:
-		L = [p for p in polygons if p.select]
+		if mode == 'deselected':
+			L = [p.index for p in polygons if not p.select]
+		else:
+			L = [p.index for p in polygons if p.select]
 	return L
 	
 	

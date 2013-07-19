@@ -31,10 +31,10 @@ def setBaseColor(baseColor):
 	vertex_colors = checkColor(me)
 
 	for p in me.polygons:
-	
-		for loop in p.loop_indices:
-			v = me.loops[loop].vertex_index
-			vertex_colors.data[loop].color = baseColor
+		if p.select:
+			for loop in p.loop_indices:
+				v = me.loops[loop].vertex_index
+				vertex_colors.data[loop].color = baseColor
 		
 		
 		

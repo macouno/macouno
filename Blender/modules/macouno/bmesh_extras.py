@@ -98,3 +98,51 @@ def crease_edges(sharpness='', limit=1.0, group=''):
 	
 	put_bmesh(bm)
 	
+	
+# Apply some colour to a face
+def colour_face(lay=False, face=False, col=False, hard=False):
+	for L in face.loops:
+		L[lay] = col
+		if not hard:
+			v = L.vert
+			for L2 in v.link_loops:
+				L2[lay] = col
+	
+	
+def colour_limb(b = False, col=False, jon=False, hard=False):
+	
+	if not b:
+		bm = get_bmesh()
+	else:
+		bm = b
+	
+	if col:
+	
+		# Get the crease custom data layer or make one if it doesn't exist
+		col_lay = bm.loops.layers.color.active
+		if col_lay is None: col_lay = bm.loops.layers.color.new()
+		
+		for f in bm.faces:
+			if f.select:
+			
+				# Find out if this face is on the outside of the selection
+				out = False
+				for e in f.edges:
+					for f2 in e.link_faces:
+						if not f2.select:
+							out = True
+							break
+							
+				# Define which colour to use
+				if out:
+					c = jon
+				else:
+					c = col
+					
+				#Apply the colour
+				colour_face(col_lay, f, c, hard)
+	
+	if not b:
+		put_bmesh(bm)
+	else:
+		return bm

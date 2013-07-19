@@ -121,7 +121,7 @@ class Entoform():
 		if string['number'] == 5 or string['number'] == 6:
 			return	
 		'''
-
+		#print(pad,'1 makegroups')
 		newGroups, formmatrix, growmatrices = self.makeAffectedGroups(string, baseGroups)
 		groupLen = len(newGroups)
 		
@@ -133,7 +133,7 @@ class Entoform():
 		#	return
 		
 		idText = 'limb '+misc.nr4(string['number'])+' '+string['name'].ljust(10, ' ')
-		print(pad,idText)
+		#print(pad,idText)
 		
 		# only if we made a group with something in it do we continue
 		if not groupLen:
@@ -171,6 +171,7 @@ class Entoform():
 				self.ob['growmatrix'] = growmatrix
 			
 				# Select a group
+				#print(pad,'2 select groups')
 				select_bmesh_faces.go(mode='GROUPED', group=group.index)
 				
 				#print('sel-',len(mesh_extras.get_selected_polygons()),group.name)
@@ -184,8 +185,10 @@ class Entoform():
 				else:
 					
 					action = string['action']
-					
+						
 					if action['type'] == 'grow':
+							
+						#print(pad,'3 grow')
 							
 						# Check for mirroring
 						right = mathutils.Vector((1.0,0.0,0.0))
@@ -203,14 +206,18 @@ class Entoform():
 					print(pad,'step ',stepText,action['name'])
 
 					# Go into edit mode to cast and grow
-					bpy.ops.object.mode_set(mode='EDIT')
 					
+					#print('a')
 					# Cast the selection to the correct shape please
 					bpy.ops.mesh.cast_loop(shape=action['loop_shape'], scale=1, scale_falloff='STR', corner_group='corner')
+					#print('b')
 					
 					# Since the matrix changes after casting... we acquire a fresh one now
 					self.ob['growmatrix'] = mesh_extras.get_selection_matrix()
-
+					
+					bpy.ops.object.mode_set(mode='EDIT')
+					
+					#print('c')
 					if action['type'] == 'bump':
 					
 						bpy.ops.mesh.bump(
@@ -231,12 +238,13 @@ class Entoform():
 							steps=True,
 							debug=False,
 							)
-						
-					select_bmesh_faces.go(mode='GROUPED', group=group.index)
 					
 					bpy.ops.object.mode_set(mode='OBJECT')
 					
-					self.applyGrowthColor(action)
+					select_bmesh_faces.go(mode='GROUPED', group=group.index)
+					
+					bmesh_extras.colour_limb(col=action['vertexcolor'], jon=action['jointcolor'], hard=action['colorstyle'])
+					
 					# RESELECT GROUPED...
 					select_bmesh_faces.go(mode='GROUPED', group=group.index)
 					
@@ -247,16 +255,13 @@ class Entoform():
 					# Remove new stuff from all but the current group
 					self.cleanGroup(group)
 					
-					#select_bmesh_faces.go(mode='GROUPED', group=0)
-					#print('post',len(mesh_extras.get_selected_polygons()))
-					
 					select_bmesh_faces.go(mode='GROUPED', group=group.index)
 					# Keep track of how much steps we've taken
 					self.dnaStep += 1
 					
 					# Redraw hack to see what is happening
 					#bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
-
+					
 					# If there's a sub string and we're allowed deeper... lets do that
 					if len(string['strings']):
 						for s in string['strings']:
@@ -367,14 +372,14 @@ class Entoform():
 		print("\n - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n")
 		print((self.stringCount+1),"Making nr",(self.stringCount+1),"DNA string for the legs\n")
 		
-		selection = self.getSelection('legs')
+		legSelection = self.getSelection('legs')
 		
-		action = self.makeAction(selection, 'legs')
+		legAction = self.makeAction(selection, 'legs')
 		#action['translation'] *= 2
 		
-		string = {'name':'left legs', 'action':action, 'selection':selection, 'strings':[], 'level':2,'number':self.stringCount}
+		legString = {'name':'left legs', 'action':legAction, 'selection':legSelection, 'strings':[], 'level':2,'number':self.stringCount}
 		
-		self.dna['strings'][1]['strings'].append(string)
+		self.dna['strings'][1]['strings'].append(legString)
 		self.stringCount += 1
 		
 		# First make lower legs (BEFORE MIRRORING!)
@@ -382,28 +387,25 @@ class Entoform():
 		print("\n - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n")
 		print((self.stringCount+1),"Making nr",(self.stringCount+1),"DNA string for the lower legs\n")
 		
-		selection = self.getSelection('lowerlegs')
-		action = self.makeAction(selection, 'lower legs')
-		#action['translation'] *= 2
+		lowerSelection = self.getSelection('lowerlegs')
+		lowerAction = self.makeAction(selection, 'lower legs')
 		
-		string = {'name':'lower legs', 'action':action, 'selection':selection, 'strings':[], 'level':3,'number':self.stringCount}
+		string = {'name':'lower legs', 'action':lowerAction, 'selection':lowerSelection, 'strings':[], 'level':3,'number':self.stringCount}
 		self.dna['strings'][1]['strings'][1]['strings'].append(string)
 		self.stringCount += 1		
 		
-		'''
+		
 		# Mirror the legs
 		if True:
-			string = self.mirrorDNA(action, selection, 3)
+			string = self.mirrorDNA(legAction, legSelection, 3)
 			self.dna['strings'][1]['strings'].append(string)
 
 		
-		#Mirror the lower legs (set to false to stop... yay)
-		if True:
-			string = self.mirrorDNA(action, selection, 3)
-			self.dna['strings'][1]['strings'][1]['strings'].append(string)
+			#Mirror the lower legs (set to false to stop... yay)
+			string = self.mirrorDNA(lowerAction, lowerSelection, 3)
+			self.dna['strings'][1]['strings'][2]['strings'].append(string)
+
 		'''
-		'''
-		
 		# SUB body!
 		print("\n - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n")
 		print((self.stringCount+1),"Making nr",(self.stringCount+1),"DNA string for the tail\n")
@@ -534,94 +536,6 @@ class Entoform():
 		
 		return vector
 	'''
-		
-		
-	# Apply a vertex colour to a vertex group
-	def applyGrowthColor(self, a):
-	
-		# Just apply the vertex colour to all the verts if it applies... easy!
-		if self.options['palettes']:
-			
-			vec = list(a['vertexcolor'])
-			selPolygons = []
-			
-			for p in self.ob.data.polygons:
-				
-				if p.select:
-					selPolygons.append(p.index)
-					
-					if a['colorstyle'] == 'soft':
-						
-						for v in p.vertices:
-							colour.applyColorToVertex(v, vec)
-						
-					else:
-						
-						colour.applyColorToPolygon(p.index, vec)
-			
-			select_bmesh_faces.go(mode='OUTER')
-			
-			vec = list(a['jointcolor'])
-			
-			selVerts = []
-			outPolygons = []
-			
-			
-			for p in self.ob.data.polygons:
-			
-				if p.select:
-					if a['colorstyle'] == 'soft':
-						for v in p.vertices:
-							colour.applyColorToVertex(v, vec)
-					else:
-						selVerts.extend(p.vertices)
-						outPolygons.append(p.index)
-						colour.applyColorToPolygon(p.index, vec)
-						
-			# Lets make some sharp edges
-			if  a['type'] == 'bump' and a['colorstyle'] == 'hard':
-			
-				# Check every edge
-				for e in self.ob.data.edges:
-				
-					v0 = e.vertices[0]
-					v1 = e.vertices[1]
-					
-					# If both verts in the edge are selected... this could be sharp
-					if v0 in selVerts and v1 in selVerts:
-						ond = 0
-						snd = 0
-						
-						# See how many polygons this edge is part of
-						for pIn in outPolygons:
-							p = self.me.polygons[pIn]
-							if v0 in p.vertices and v1 in p.vertices:
-								ond += 1
-								
-						for pIn in selPolygons:
-							if not pIn in outPolygons:
-								p = self.me.polygons[pIn]
-								if v0 in p.vertices and v1 in p.vertices:
-									snd += 1
-								
-						# If the edge is only part of one seleced face it's on the outside
-						if ond == 1: # and snd == 1:
-							e.crease = 1.0
-							'''
-							sharp = 0
-							pole = 1
-							
-							for ec in self.ob.data.edges:
-								if not ec == e:
-									ecVerts = ec.vertices
-									if v0 in ecVerts or v1 in ecVerts:
-										pole += 1
-										if ec.use_edge_sharp:
-											sharp += 1
-						
-							if pole == 4 and sharp < 2:
-								e.use_edge_sharp = True
-							'''
 				
 	
 	
@@ -632,7 +546,7 @@ class Entoform():
 			'type': 'direction',
 			'area': 'area',
 			'vector': mathutils.Vector(),
-			'divergence': math.radians(45),
+			'divergence': math.radians(60),
 			'method': 'generated'
 			}
 		
@@ -790,7 +704,6 @@ class Entoform():
 					# Select connected twice to make sure we have enough now that selection is doubled
 					select_bmesh_faces.go(mode='CONNECTED', extend=True)
 					select_bmesh_faces.go(mode='CONNECTED', extend=True)
-					#select_bmesh_faces.go(mode='INNER', invert=True)
 					
 					#print('2, selected',len(mesh_extras.get_selected_polygons()))
 					
@@ -802,30 +715,11 @@ class Entoform():
 					while selCnt and selCnt == nuCnt and div > 0.1:
 						
 						select_bmesh_faces.go(mode='DIRECTIONAL', direction=selection['vector'], limit=div)
+						nuCnt = len(mesh_extras.get_selected_polygons())
 						
-						selPolygons = mesh_extras.get_selected_polygons()
-						nuCnt = len(selPolygons)
-						
-						print('join selection at',math.degrees(div), nuCnt)
+						#print('join selection at',math.degrees(div), nuCnt)
 						
 						div = div * 0.5
-					# Check for opposing normals.. .cause they should not be there!
-					'''
-					for f1 in selPolygons:
-						if f1.select:
-							f1No = f1.normal
-							for f2 in selPolygons:
-								if f2.select and not f1 is f2:
-									f2No = f2.normal
-									ang = f2No.angle(f1No)
-									if ang > math.radians(120):
-										f1.select = False
-										break
-					'''
-					selPolygons = mesh_extras.get_selected_polygons()
-					nuCnt = len(selPolygons)
-					
-					print('joint',nuCnt)
 						
 					if nuCnt == selCnt:
 						select_bmesh_faces.go(mode='NONE')
@@ -903,67 +797,10 @@ class Entoform():
 		# If we still have something selected, then we need to check for Islands (only one coninuous island should be selected)
 		if selection['type'] == 'direction' and selection['area'] == 'area':
 			
-			#self.checkForIslands(selection['vector'])
 			select_bmesh_faces.go(mode='ISLAND')
 			
 	
 	
-	# Make sure only one "island" is selected
-	def checkForIslands(self, vector):
-		
-		polygons = mesh_extras.get_selected_polygons()
-		
-		# Find the face furthest along the vector
-		max = 0.0
-		closestFace = 0
-		closestVerts = 0
-		for i,p in enumerate(polygons):
-		
-			# Get the center point for this polygon... shees
-			cent = mathutils.Vector()
-			for loop_index in range(p.loop_start, p.loop_start + p.loop_total):
-				vIndex = self.me.loops[loop_index].vertex_index
-				v = self.me.vertices[vIndex]
-				cent += v.co
-		
-			cent /= p.loop_total
-		
-			dist = vector.dot(cent)
-			if dist > max or not i:
-				max = dist
-				closestPolygon = p
-				closestVerts = p.vertices
-			
-		# Find the polygons connected to this one!
-		connectedPolygons = [closestPolygon]
-		connectedVerts = list(closestVerts)
-		foundNew = True
-		
-		# As long as we can find connected polygons we continue
-		while foundNew:
-			foundNew = False
-			
-			for p in polygons:
-				addThis = False
-				# If we haven't done this one yet
-				if not p in connectedPolygons:
-				
-					intersection = [v for v in p.vertices if v in connectedVerts]
-					if len(intersection):
-						addThis = True
-						
-				if addThis:
-					foundNew = True
-					connectedPolygons.append(p)
-					connectedVerts.extend(p.vertices)
-					
-		# Deselect disconnected polygons
-		for p in polygons:
-			if not p in connectedPolygons:
-				p.select = False
-					
-		
-		
 	# Make relative weights for the verts
 	def makeWeights(self, verts):
 		
@@ -1181,7 +1018,7 @@ class Entoform():
 		self.options['bool'] = {'a': True,'b': False}
 		
 		self.options['primary'] = {
-			'translate': {'min': 4.0, 'max': 10.0},
+			'translate': {'min': 1.0, 'max': 3.0},
 			'scale': {'min': 0.4, 'max': 0.7},
 			'crease': {'min': 0.4, 'max': 0.7},
 			'bumpscale': {'min': 0.4, 'max': 0.7},
@@ -1192,7 +1029,7 @@ class Entoform():
 			}
 			
 		self.options['secondary'] = {
-			'translate': {'min': -1.0, 'max': 2.0},
+			'translate': {'min': -0.5, 'max': 1.0},
 			'scale': {'min': -0.3, 'max': 0.3},
 			'crease': {'min': -0.3, 'max': 0.3},
 			'bumpscale': {'min': -0.35, 'max': 0.3},

@@ -59,6 +59,7 @@ class Cast_Loop():
 		self.me = self.ob.data
 		self.scale = scale
 		self.scale_falloff = scale_falloff
+		self.mod = self.ob.mode
 		
 		# Get/make a corner group vertex group
 		if corner_group:
@@ -67,7 +68,8 @@ class Cast_Loop():
 			except:
 				corner_group = self.ob.vertex_groups.new(corner_group)
 				
-		bpy.ops.object.mode_set(mode='OBJECT')
+		if self.mod == 'EDIT':
+			bpy.ops.object.mode_set(mode='OBJECT')
 				
 		# Now only the outer loop
 		self.selVerts = mesh_extras.get_selected_vertices()
@@ -272,10 +274,10 @@ class Cast_Loop():
 						
 						v.co = bLine + self.cent
 				
-			mesh_extras.smooth_selection(self.inVerts, 5)
+			#mesh_extras.smooth_selection(self.inVerts, 5)
 		
-		
-		bpy.ops.object.mode_set(mode='EDIT')
+		if self.mod == 'EDIT':
+			bpy.ops.object.mode_set(mode='EDIT')
 		
 		
 		
