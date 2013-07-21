@@ -121,7 +121,7 @@ def color_mesh(col):
 	if col_lay is None: col_lay = bm.loops.layers.color.new()
 	
 	for f in bm.faces:
-		color_face(lay=col_lay, col=col, hard=True)
+		color_face(lay=col_lay, face=f, col=col, hard=True)
 	
 	put_bmesh(bm)	
 	

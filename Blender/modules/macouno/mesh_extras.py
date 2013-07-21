@@ -444,7 +444,7 @@ def get_corner_polygon(polygons):
 	
 # Create vertex groups containing this selection (in different groupings)
 # Written for use with the Entoforms addon
-def group_selection(area='area', name='group', chunkProduct=1):
+def group_selection(area='area', name='group', chunkProduct=1, chunkLimit=False):
 
 	ob = bpy.context.active_object
 	polygons = get_selected_polygons()
@@ -483,8 +483,12 @@ def group_selection(area='area', name='group', chunkProduct=1):
 			elif area == 'chunks':
 				
 				selPolys = [p for p in polygons]
+				chunkLen = 0
 				
 				while len(selPolys):
+					if chunkLimit and chunkLen >= chunkLimit:
+						break
+
 				
 					chunkV = []
 					chunkP = []
@@ -512,6 +516,8 @@ def group_selection(area='area', name='group', chunkProduct=1):
 					# This usually to make sure the chunk is a multiple of 2....
 					if not len(chunkP) % chunkProduct:
 					
+						chunkLen += 1
+						
 						newMatrices.append(get_selection_matrix(chunkP))
 						
 						newGroup = ob.vertex_groups.new(name)

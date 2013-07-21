@@ -76,6 +76,7 @@ class Entoform():
 		self.createDNA()
 		
 		# Make the base group
+		bpy.ops.object.mode_set(mode='OBJECT')
 		baseGroups = self.makeBaseGroup()
 		
 		for string in self.dna['strings']:
@@ -547,7 +548,7 @@ class Entoform():
 			'type': 'direction',
 			'area': 'area',
 			'vector': mathutils.Vector(),
-			'divergence': math.radians(60),
+			'divergence': math.radians(50),
 			'method': 'generated'
 			}
 		
@@ -581,7 +582,6 @@ class Entoform():
 			
 		elif type == 'eyes':
 		
-			
 			selection['type'] = self.choose('select', 'selectioneyes', 'selection type')
 			selection['area'] = 'polygons'
 		
@@ -608,9 +608,8 @@ class Entoform():
 			
 				selection['divergence'] = self.choose('float', 'divergence', 'directional divergence')
 					
-					
-		if selection['area'] == 'polygons':
-			selection['limit'] =  self.choose('int', 'limit', 'selection limit')
+		# Limit the selection... originally only for polygons (but nice for other things too? chunks certainly)
+		selection['limit'] =  self.choose('int', 'limit', 'selection limit')
 			
 		selection['formmatrix'] = ''
 		selection['growmatrices'] = []
@@ -744,7 +743,6 @@ class Entoform():
 				
 		return newGroups, formmatrix, growmatrices
 		
-				
 		
 		
 	# Adding the current selection to a new group
@@ -755,7 +753,7 @@ class Entoform():
 		
 		polygons = mesh_extras.get_selected_polygons()
 		
-		addGroups, addMatrices = mesh_extras.group_selection(area = selection['area'], name=string['name'],chunkProduct=4)
+		addGroups, addMatrices = mesh_extras.group_selection(area = selection['area'], name=string['name'],chunkProduct=4, chunkLimit=selection['limit'])
 		
 		for g in addGroups:
 			newGroups.append(g)
@@ -1026,7 +1024,7 @@ class Entoform():
 			'loopscale': {'min': 0.3, 'max': 1.3},
 			'rotation': {'min': math.radians(-60.0), 'max': math.radians(60.0)},
 			'divergence': {'min': math.radians(45),'max': math.radians(75)},
-			'limit': {'min': 4, 'max': 6},
+			'limit': {'min': 3, 'max': 6},
 			}
 			
 		self.options['secondary'] = {
@@ -1096,8 +1094,6 @@ class Entoform():
 		else:
 			vertex_colors = self.me.vertex_colors.new(name="color")
 			self.me.vertex_colors.active = vertex_colors
-		
-		self.vCols = vertex_colors
 		
 		# Save the dna string in a property if we want!
 		self.ob['dnastring'] = dnaString
