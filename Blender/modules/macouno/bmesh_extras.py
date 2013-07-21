@@ -97,10 +97,11 @@ def crease_edges(sharpness='', limit=1.0, group=''):
 					e[crease_lay] = 0.0
 	
 	put_bmesh(bm)
+
 	
 	
-# Apply some colour to a face
-def colour_face(lay=False, face=False, col=False, hard=False):
+# Apply some color to a face
+def color_face(lay=False, face=False, col=False, hard=False):
 	for L in face.loops:
 		L[lay] = col
 		if not hard:
@@ -109,7 +110,23 @@ def colour_face(lay=False, face=False, col=False, hard=False):
 				L2[lay] = col
 	
 	
-def colour_limb(b = False, col=False, jon=False, hard=False):
+	
+# Set the base color for the entire mesh at the start
+def color_mesh(col):
+
+	bm = get_bmesh()
+	
+	# Get the crease custom data layer or make one if it doesn't exist
+	col_lay = bm.loops.layers.color.active
+	if col_lay is None: col_lay = bm.loops.layers.color.new()
+	
+	for f in bm.faces:
+		color_face(lay=col_lay, col=col, hard=True)
+	
+	put_bmesh(bm)	
+	
+	
+def color_limb(b = False, col=False, jon=False, hard=False):
 	
 	if not b:
 		bm = get_bmesh()
@@ -133,14 +150,14 @@ def colour_limb(b = False, col=False, jon=False, hard=False):
 							out = True
 							break
 							
-				# Define which colour to use
-				if out:
+				# Define which color to use
+				if jon and out:
 					c = jon
 				else:
 					c = col
 					
-				#Apply the colour
-				colour_face(col_lay, f, c, hard)
+				#Apply the color
+				color_face(col_lay, f, c, hard)
 	
 	if not b:
 		put_bmesh(bm)

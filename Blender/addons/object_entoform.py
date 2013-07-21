@@ -56,7 +56,7 @@ else:
 import bpy, mathutils, math, cProfile, colorsys, datetime, time
 from mathutils import geometry
 from bpy.props import StringProperty, IntProperty, BoolProperty
-from macouno import mesh_extras, misc, colour, select_bmesh_faces, falloff_curve, liberty, bmesh_extras
+from macouno import mesh_extras, misc, color, select_bmesh_faces, falloff_curve, liberty, bmesh_extras
 
 # Make it as a class
 class Entoform():
@@ -243,7 +243,7 @@ class Entoform():
 					
 					select_bmesh_faces.go(mode='GROUPED', group=group.index)
 					
-					bmesh_extras.colour_limb(col=action['vertexcolor'], jon=action['jointcolor'], hard=action['colorstyle'])
+					bmesh_extras.color_limb(col=action['vertexcolor'], jon=action['jointcolor'], hard=action['colorstyle'])
 					
 					# RESELECT GROUPED...
 					select_bmesh_faces.go(mode='GROUPED', group=group.index)
@@ -275,7 +275,8 @@ class Entoform():
 		# Make the color palette
 		if self.options['palettes']:
 			self.options['basecolor'] = self.choose('select', 'palette', 'base color')
-			colour.setBaseColor(self.options['basecolor'])
+			bmesh_extras.color_mesh(self.options['basecolor'])
+			#color.setBaseColor(self.options['basecolor'])
 			
 			print("\n - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n")
 		
@@ -1189,7 +1190,7 @@ class Entoform():
 			self.ob['paletteId'] = self.paletteId
 			self.ob['palette'] = self.paletteTitle
 			
-			#paletteQuery = "INSERT INTO ff_palettes(id, theme_id, name, creator, colour_1, colour_2, colour_3, colour_4, colour_5) VALUES (NULL,'"+self.paletteId+"','"+self.paletteTitle+"','"+self.paletteAuthor+"'"
+			#paletteQuery = "INSERT INTO ff_palettes(id, theme_id, name, creator, color_1, color_2, color_3, color_4, color_5) VALUES (NULL,'"+self.paletteId+"','"+self.paletteTitle+"','"+self.paletteAuthor+"'"
 			
 			#swatches
 			if 'swatches' in bpy.data.objects:
@@ -1202,9 +1203,9 @@ class Entoform():
 				
 				#paletteQuery = paletteQuery+",'"+hex+"'"
 				swatch = self.options['palette'][k]
-				col = 'colour_'+str(j+1)
+				col = 'color_'+str(j+1)
 				
-				self.ob[col] = hex #colour.rgb_to_hex(swatch)
+				self.ob[col] = hex #color.rgb_to_hex(swatch)
 				if paletteOb:
 					for i, f in enumerate(paletteOb.data.vertex_colors.active.data):
 						if i == j:
@@ -1218,7 +1219,7 @@ class Entoform():
 			
 			#self.ob['paletteQuery'] = paletteQuery
 			'''
-			INSERT INTO `admin_entoforms`.`ff_palettes` (`id`, `theme_id`, `name`, `creator`, `colour_1`, `colour_2`, `colour_3`, `colour_4`, `colour_5`) VALUES (NULL, '1373430', 'giblythe1', 'jakestolte', '3d3d3f', 'bf8c2f', 'bcbfbf', 'f2f2f2', 'f2dfba');
+			INSERT INTO `admin_entoforms`.`ff_palettes` (`id`, `theme_id`, `name`, `creator`, `color_1`, `color_2`, `color_3`, `color_4`, `color_5`) VALUES (NULL, '1373430', 'giblythe1', 'jakestolte', '3d3d3f', 'bf8c2f', 'bcbfbf', 'f2f2f2', 'f2dfba');
 			'''
 		
 		
