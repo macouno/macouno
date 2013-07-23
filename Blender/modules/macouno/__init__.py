@@ -23,7 +23,7 @@ Utility modules by macouno.
 """
 
 __all__ = (
-    "colour",
+    "color",
     "falloff_curve",
     "group_extras",
     "liberty",
