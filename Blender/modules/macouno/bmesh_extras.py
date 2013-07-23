@@ -58,7 +58,7 @@ def has_selected(bm):
 	
 	
 # Crease all edges sharper than 60 degrees (1 radians-ish)
-def crease_edges(sharpness='', limit=1.0, group=''):
+def crease_edges(sharpness='', limit=1.0, group=False):
 	bm = get_bmesh()
 	
 	# Get the crease custom data layer or make one if it doesn't exist
@@ -67,7 +67,12 @@ def crease_edges(sharpness='', limit=1.0, group=''):
 	
 	# Create edge creases based on a group
 	if group:
-		gi = bpy.context.active_object.vertex_groups[group].index
+		try:
+			gi = bpy.context.active_object.vertex_groups[group].index
+		except:
+			gi = False
+			
+	if gi:
 	
 		# Get the customdata layer with vertex group information
 		group_lay = bm.verts.layers.deform.active

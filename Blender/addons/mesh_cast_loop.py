@@ -274,7 +274,7 @@ class Cast_Loop():
 						
 						v.co = bLine + self.cent
 				
-			#mesh_extras.smooth_selection(self.inVerts, 5)
+			mesh_extras.smooth_selection(self.inVerts, 2)
 		
 		if self.mod == 'EDIT':
 			bpy.ops.object.mode_set(mode='EDIT')
