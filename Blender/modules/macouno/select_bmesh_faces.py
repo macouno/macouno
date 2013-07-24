@@ -2,7 +2,6 @@ import bpy, mathutils, bmesh
 from macouno import bmesh_extras
 	
 	
-	
 # Select all
 def all(bm):
 
@@ -26,7 +25,7 @@ def none(bm):
 # Select the innermost faces of your current selection
 def inner(bm, invert=False):
 
-	selFaces = bmesh_extras.get_selected(bm)
+	selFaces = bmesh_extras.get_selected_faces(bm)
 	
 	# no need to continue if there are no selected faces
 	if len(selFaces):
@@ -80,7 +79,7 @@ def inner(bm, invert=False):
 # Select the outermost faces of your current selection
 def outer(bm, invert=False):
 	#print('x outer start')
-	selFaces = bmesh_extras.get_selected(bm)
+	selFaces = bmesh_extras.get_selected_faces(bm)
 	selLen = len(selFaces)
 	
 	# no use continueing if there's no selection
@@ -252,11 +251,11 @@ def get_connected(conFaces, checkFaces, face):
 # Make sure there's no multiple islands selected
 def island_check(bm):
 	
-	selFaces = bmesh_extras.get_selected(bm)
+	selFaces = bmesh_extras.get_selected_faces(bm)
 
 	if len(selFaces):
 
-		checkFaces = bmesh_extras.get_selected(bm)
+		checkFaces = bmesh_extras.get_selected_faces(bm)
 
 		biggestLen = False
 		biggestCon = False

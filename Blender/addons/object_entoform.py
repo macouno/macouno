@@ -392,7 +392,7 @@ class Entoform():
 		
 		
 		# Mirror the legs
-		if False:
+		if True:
 			string = self.mirrorDNA(legAction, legSelection, 3)
 			self.dna['strings'][1]['strings'].append(string)
 		
@@ -745,18 +745,32 @@ class Entoform():
 		self.doubleCheckSelection(selection)
 		
 		polygons = mesh_extras.get_selected_polygons()
-		
-		addGroups, addMatrices = mesh_extras.group_selection(area = selection['area'], name=string['name'],chunkProduct=4, chunkLimit=selection['limit'])
-		
-		for g in addGroups:
-			newGroups.append(g)
-			self.newGroups.append(g)
-			
-		for m in addMatrices:
-			growmatrices.append(m)
-		
 		formmatrix = mesh_extras.get_selection_matrix(polygons)
 		
+		if selection['area'] == 'area':
+			
+			addedGroup = bmesh_extras.add_to_group(newGroup=True, groupName=string['name'])
+			addedGroups = [addedGroup]
+		
+		else:
+			addedGroups = bmesh_extras.cluster_selection(limit=9, groupName=string['name'])
+		
+		#addGroups, addMatrices = mesh_extras.group_selection(area = selection['area'], name=string['name'],chunkProduct=4, chunkLimit=selection['limit'])
+		
+		if len(addedGroups):
+			addedMatrices = []
+			for g in addedGroups:
+				group = bpy.context.active_object.vertex_groups[g]
+				newGroups.append(group)
+				self.newGroups.append(group)
+				
+				# Get a matrix for every group
+				select_bmesh_faces.go(mode='GROUPED', group=g)
+				addedMatrices.append(mesh_extras.get_selection_matrix())
+				
+			for m in addedMatrices:
+				growmatrices.append(m)
+			
 		return newGroups, formmatrix, growmatrices
 		
 		

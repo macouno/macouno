@@ -167,6 +167,7 @@ def smooth_selection(verts=False,loops=5):
 			v.co = newCo[i]
 	
 	
+	
 # Get the selection radius (minimum distance of an outer edge to the centre)
 def get_selection_radius():
 

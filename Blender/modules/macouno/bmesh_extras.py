@@ -5,13 +5,8 @@ import bpy, mathutils, bmesh
 def get_bmesh():
 	
 	# Get the active mesh
-	ob = bpy.context.object
+	ob = bpy.context.active_object
 	me = ob.data
-	
-	sel = 0
-	for f in me.polygons:
-		if f.select:
-			sel += 1
 
 	# Get a BMesh representation
 	if ob.mode == 'OBJECT':
@@ -28,7 +23,7 @@ def get_bmesh():
 def put_bmesh(bm):
 	
 	# Get the active mesh
-	ob = bpy.context.object
+	ob = bpy.context.active_object
 	me = ob.data
 	
 	# Flush selection
@@ -177,7 +172,6 @@ def get_corners(faces=None,preferred=None):
 								pref =True
 								break
 
-							
 					# If the corner is connected to a preferred face it is inserted at the start of the list
 					if pref:
 						corners.insert(0, f1)
@@ -186,7 +180,6 @@ def get_corners(faces=None,preferred=None):
 					
 					break
 				
-					
 		if len(corners):
 			return corners
 		
@@ -230,8 +223,6 @@ def get_cluster(face=None, faces=None, limit=8):
 						biggestFace = f
 						biggestConnection = connectCount
 		
-		#print('result',biggestFace,biggestConnection,biggestEdge)
-		
 		# if we found a face that is connected well add it, and it's verts n edges to the cluster
 		if biggestFace:
 			addedFace = True
@@ -247,33 +238,50 @@ def get_cluster(face=None, faces=None, limit=8):
 	
 	
 # Add a faces in a list to a vertex group
-def add_to_group(bm=None, faces=None, newGroup=None, groupName='group'):
+def add_to_group(bme=None, faces=None, newGroup=True, groupName='group'):
+		
+	if not bme:
+		bm = get_bmesh()
+	else:
+		bm = bme
+	
+	# If no faces are supplied make a new list from the selection
+	if not faces:
+		faces = [f for f in bm.faces if f.select]
 		
 	dvert_lay = bm.verts.layers.deform.active
 	if dvert_lay is None: dvert_lay = bm.verts.layers.deform.new()
 	
+	# Create a new vertex group if required
 	if newGroup:
 		group = bpy.context.active_object.vertex_groups.new(groupName)
 		group_index = group.index
 	else:
+		# Try to retrieve the vertex group, and if we can't make a new one anyway
 		try:
 			group_index = bpy.context.active_object.vertex_groups[groupName]
 		except:
 			group = bpy.context.active_object.vertex_groups.new(groupName)
 			group_index = group.index
 	
+	# Put all verts of the faces in this group!
 	for f in faces:
 		for v in f.verts:
 			v[dvert_lay][group_index] =1.0
-	
-	return bm
+			
+	if not bme:
+		put_bmesh(bm)
+		return group_index
+	else:
+		return bm, group_index
 	
 	
 	
 # Take the current selection and make a series of vertex groups for it
-def cluster_selection(limit=8):
+def cluster_selection(limit=8,groupName='cluster'):
 	
 	bm = get_bmesh()
+	newGroups = []
 	
 	# Get all selected faces
 	selFaces = [f for f in bm.faces if f.select]
@@ -282,39 +290,32 @@ def cluster_selection(limit=8):
 	faceCounter = 0
 	cluster = []
 	
+	# Try to use up all selected faces (break gets us out if no more options are found)
 	while len(selFaces):
-	
-		#if cornerCounter:
-		#	return
 		
 		# Find a corner in the current selection (only if we need to start fresh)
 		if not cornerCounter:
 			corners = get_corners(faces=selFaces,preferred=cluster)
-			#print('retrieved corners',len(corners))
 		
 		# If there's no corner... we just use the first face... whatever
 		if corners and len(corners) and cornerCounter < len(corners):
 			face = corners[cornerCounter]
 			cornerCounter += 1
-			#print('attempting corner',cornerCounter)
 		elif faceCounter < len(selFaces):
 			face = selFaces[faceCounter]
 			faceCounter += 1
-			#print('attempting face',cornerCounter)
 		else:
-			#print('done with',len(corners),'corners & cornerCounter',cornerCounter,'& faceCounter', faceCounter,'& selFaces',len(selFaces))
 			break
-			
-		
 			
 		cluster = get_cluster(face=face, faces=selFaces, limit=limit)
 		
 		# If we made a neat cluster...
 		if len(cluster) == limit:
 			
-			#print('found at',cornerCounter,faceCounter)
+			bm, group_index = add_to_group(bme=bm, faces=cluster, newGroup=True,groupName=groupName)
 			
-			bm = add_to_group(bm=bm, faces=cluster, newGroup=True,groupName='cluster')
+			# Keep track of all added vertex groups!
+			newGroups.append(group_index)
 			
 			 # Remove this cluster from the selection of faces we started with
 			for face in cluster:
@@ -324,15 +325,9 @@ def cluster_selection(limit=8):
 			cornerCounter = 0
 			faceCounter = 0
 
-	'''
-	if len(selFaces):
-		for f in bm.faces:
-			if f in selFaces:
-				f.select_set(True)
-			else:
-				f.select_set(False)
-	'''
 	put_bmesh(bm)
+	
+	return newGroups
 	
 	
 # Apply some color to a face
