@@ -44,7 +44,7 @@ def put_bmesh(bm):
 		
 		
 # Get a list of all selected faces
-def get_selected_faces(bme=False):
+def get_selected_faces(bme=None):
 	if not bme:
 		bm = get_bmesh()
 	else:
@@ -68,7 +68,7 @@ def has_selected(bm):
 	
 	
 # Crease all edges sharper than 60 degrees (1 radians-ish)
-def crease_edges(sharpness='', limit=1.0, group=False):
+def crease_edges(sharpness='', limit=1.0, group=None):
 	
 	bm = get_bmesh()
 	
@@ -152,19 +152,40 @@ def get_outer_faces(faces):
 	
 	
 # Find a corner in a list of faces
-def get_corners(faces=False, limit=False):
+def get_corners(faces=None,preferred=None):
 	
 	if faces:
-		verts = [v for f in faces for v in f.verts]
+	
+		vertList = [v.index for f in faces for v in f.verts]
 		corners = []
 								
 		# Find all faces with a vert that isn't shared with any others
-		for f in faces:
-			for v in f.verts:
-				if verts.count(v) == 1:
-					corners.append(f)
-					if limit and len(corners) == limit:
-						return corners
+		for f1 in faces:
+
+			for v1 in f1.verts:
+					
+				# If this vert is only in the selected verts once... it must be an outer corner
+				if vertList.count(v1.index) == 1:
+					
+					# Now see if the vert is connected to a preferred face
+					pref = False
+					for v2 in f1.verts:
+						if pref: break
+						
+						for f2 in v2.link_faces:
+							if f2 in preferred:
+								pref =True
+								break
+
+							
+					# If the corner is connected to a preferred face it is inserted at the start of the list
+					if pref:
+						corners.insert(0, f1)
+					else:
+						corners.append(f1)
+					
+					break
+				
 					
 		if len(corners):
 			return corners
@@ -174,12 +195,13 @@ def get_corners(faces=False, limit=False):
 
 	
 # Get a cluster starting with a specific face	
-def get_cluster(face=False, faces=False, limit=4):
+def get_cluster(face=None, faces=None, limit=8):
 
 	clusterFaces = [face]
-	clusterVerts = [v for v in face.verts]
-	clusterEdges = [e for e in face.edges]
+	clusterVerts = [v.index for v in face.verts]
+	clusterEdges = [e.index for e in face.edges]
 	addedFace = True
+	lastConnect = 0
 	
 	# As long as we haven't reached the limit and keep adding faces... keep going
 	while len(clusterFaces) < limit and addedFace:
@@ -187,39 +209,45 @@ def get_cluster(face=False, faces=False, limit=4):
 		addedFace = False
 		biggestFace = False
 		biggestConnection = False
-		
+		biggestEdge = False
+	
 		# Loop through all faces to check the connections
 		for f in faces:
 			if not f in clusterFaces:
 				
 				# Count all verts and edges connecting this face to the cluster
 				connectCount = 0
-				for v in f.verts:
-					connectCount += clusterVerts.count(v)
-					
+
 				for e in f.edges:
-					connectCount += clusterEdges.count(e)
-				
-				if connectCount:
+					connectCount += clusterEdges.count(e.index)
+					
+				for v in f.verts:
+					connectCount += clusterVerts.count(v.index)
+			
+				# OK... so We want more and more connections... because that means we loop around nicely, but if the previous connection was 7 we can start fresh
+				if connectCount and (connectCount > lastConnect or lastConnect >= 7):
 					if biggestFace is False or connectCount > biggestConnection or (connectCount == biggestConnection and is_outer_face(f, faces)):
 						biggestFace = f
 						biggestConnection = connectCount
-					
+		
+		#print('result',biggestFace,biggestConnection,biggestEdge)
+		
 		# if we found a face that is connected well add it, and it's verts n edges to the cluster
 		if biggestFace:
 			addedFace = True
+			lastConnect = biggestConnection
 			clusterFaces.append(biggestFace)
 			for v in biggestFace.verts:
-				clusterVerts.append(v)
+				clusterVerts.append(v.index)
 			for e in biggestFace.edges:
-				clusterEdges.append(e)
+				clusterEdges.append(e.index)
 
 	return clusterFaces
 	
 	
 	
 # Add a faces in a list to a vertex group
-def add_to_group(bm=None, faces=None, newGroup=False, groupName='group'):
+def add_to_group(bm=None, faces=None, newGroup=None, groupName='group'):
 		
 	dvert_lay = bm.verts.layers.deform.active
 	if dvert_lay is None: dvert_lay = bm.verts.layers.deform.new()
@@ -243,36 +271,48 @@ def add_to_group(bm=None, faces=None, newGroup=False, groupName='group'):
 	
 	
 # Take the current selection and make a series of vertex groups for it
-def group_selection(limit=4):
+def cluster_selection(limit=8):
 	
 	bm = get_bmesh()
 	
 	# Get all selected faces
 	selFaces = [f for f in bm.faces if f.select]
 
-	addedCluster = True
 	cornerCounter = 0
 	faceCounter = 0
+	cluster = []
 	
 	while len(selFaces):
+	
+		#if cornerCounter:
+		#	return
 		
-		# Find a corner in the current selection
-		corners = get_corners(faces=selFaces, limit=1)
+		# Find a corner in the current selection (only if we need to start fresh)
+		if not cornerCounter:
+			corners = get_corners(faces=selFaces,preferred=cluster)
+			#print('retrieved corners',len(corners))
 		
 		# If there's no corner... we just use the first face... whatever
-		if corners and cornerCounter < len(corners):
+		if corners and len(corners) and cornerCounter < len(corners):
 			face = corners[cornerCounter]
 			cornerCounter += 1
+			#print('attempting corner',cornerCounter)
 		elif faceCounter < len(selFaces):
 			face = selFaces[faceCounter]
 			faceCounter += 1
+			#print('attempting face',cornerCounter)
 		else:
+			#print('done with',len(corners),'corners & cornerCounter',cornerCounter,'& faceCounter', faceCounter,'& selFaces',len(selFaces))
 			break
+			
+		
 			
 		cluster = get_cluster(face=face, faces=selFaces, limit=limit)
 		
 		# If we made a neat cluster...
 		if len(cluster) == limit:
+			
+			#print('found at',cornerCounter,faceCounter)
 			
 			bm = add_to_group(bm=bm, faces=cluster, newGroup=True,groupName='cluster')
 			
@@ -284,12 +324,19 @@ def group_selection(limit=4):
 			cornerCounter = 0
 			faceCounter = 0
 
-	
+	'''
+	if len(selFaces):
+		for f in bm.faces:
+			if f in selFaces:
+				f.select_set(True)
+			else:
+				f.select_set(False)
+	'''
 	put_bmesh(bm)
 	
 	
 # Apply some color to a face
-def color_face(lay=False, face=False, col=False, hard=False):
+def color_face(lay=None, face=None, col=None, hard=None):
 	for L in face.loops:
 		L[lay] = col
 		if not hard:
@@ -316,7 +363,7 @@ def color_mesh(col):
 	
 	
 # Add some vertex colour to a limb
-def color_limb(b = False, col=False, jon=False, hard=False):
+def color_limb(b = None, col=None, jon=None, hard=None):
 	
 	if not b:
 		bm = get_bmesh()
