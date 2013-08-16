@@ -211,7 +211,7 @@ def directional(bm, extend=False, direction=(0.0,0.0,1.0), limit=1.57):
 	
 	
 # Make sure there are less polygons selected than the limit
-def limit(bm, limit=1, key=''):
+def limited(bm, limit, key):
 
 	from macouno import liberty
 	lib = liberty.liberty('string', key)
@@ -309,7 +309,7 @@ def go(mode='ALL', invert=False, extend=False, group=0, direction=(0.0,0.0,1.0),
 		bm = grouped(bm, extend, group)
 		
 	elif mode == 'LIMIT':
-		bm = grouped(bm, limit, key)		
+		bm = limited(bm, limit, key)		
 		
 	elif mode == 'ISLAND':
 		bm = island_check(bm)

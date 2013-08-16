@@ -1,4 +1,4 @@
-import bpy, mathutils, bmesh
+import bpy, bmesh, mathutils, math
 
 
 # Get the bmesh data from the current mesh object
@@ -38,18 +38,18 @@ def put_bmesh(bm):
 		
 		
 		
-# Get a list of all selected faces
-def get_selected_faces(bme=None):
-	if not bme:
-		bm = get_bmesh()
-	else:
-		bm = bme
 		
-	selFaces = [f for f in bm.faces if f.select]
-	
-	if not bme: put_bmesh(bm)
-	
-	return selFaces
+# Get a list of all selected faces
+def get_selected_faces(bm):
+		
+	return [f for f in bm.faces if f.select]
+		
+		
+		
+# Get a list of all selected faces
+def get_selected_verts(bm):
+		
+	return [v for v in bm.verts if v.select]
 
 	
 
@@ -136,14 +136,87 @@ def get_outer_faces(faces):
 	
 	outFaces = []
 	for f1 in faces:
+		found = False
 		for v in f1.verts:
+			if found: break
+			
 			# Check all connected faces
 			for f2 in v.link_faces:
-				if not f2 == f1 and not f2.select:
+				if not f2 == f1 and not f2 in faces:
 					outFaces.append(f1)
+					found =True
+					break
 					
 	return outFaces
 	
+	
+	
+# Get the verts on the outside of your selection
+def get_outer_verts(faces):
+	
+	outVerts = []
+	for f1 in faces:
+	
+		for v in f1.verts:
+			if not v in outVerts:
+			
+				# Check all connected faces
+				for f2 in v.link_faces:
+					if not f2 in faces:
+						outVerts.append(v)
+						break
+					
+	return outVerts	
+	
+	
+	
+# Get the verts on the outside of your selection
+def get_outer_edges(faces):
+	
+	outEdges = []
+	for f1 in faces:
+		for e in f1.edges:
+			if not e in outEdges:
+			
+				 # Both the edge's verts should be connected to a non selected face
+				out = 0
+				for v in e.verts:
+					for f2 in v.link_faces:
+						if f2 in faces:
+							out += 1
+							break
+							
+				if out == 2:
+					outEdges.append(e)
+					
+	return outEdges
+	
+	
+	
+# Get the center point of a list of faces
+def get_center(faces):
+	
+	c = mathutils.Vector()
+	cnt = 0
+	
+	for f in faces:
+		c += f.calc_center_bounds()
+		cnt += 1
+			
+	return c / cnt	
+	
+	
+	
+# Get the normal of a list of faces
+def get_normal(faces):
+	
+	c = mathutils.Vector()
+	
+	for f in faces:
+		c += f.normal
+			
+	return c.normalized()
+			
 	
 	
 # Find a corner in a list of faces
@@ -358,12 +431,12 @@ def color_mesh(col):
 	
 	
 # Add some vertex colour to a limb
-def color_limb(b = None, col=None, jon=None, hard=None):
+def color_limb(bme = None, col=None, jon=None, hard=None):
 	
-	if not b:
+	if not bme:
 		bm = get_bmesh()
 	else:
-		bm = b
+		bm = bme
 	
 	if col:
 	
@@ -391,7 +464,110 @@ def color_limb(b = None, col=None, jon=None, hard=None):
 				#Apply the color
 				color_face(col_lay, f, c, hard)
 	
-	if not b:
+	if not bme:
+		put_bmesh(bm)
+	else:
+		return bm
+		
+		
+# Find the next vert and place it the correct nr of degrees clockwise around the midpoint
+def loop_step(v1,step,outEdges, center, dVec):
+
+	v1co = v1.co - center
+
+	#Check both edges connected to this one
+	for e in v1.link_edges:
+		
+		if e in outEdges:
+		
+			if v1 == e.verts[0]:
+				v2 = e.verts[1]
+			else:
+				v2 = e.verts[0]
+				
+			v2co = v2.co - center
+		
+				if dVec is False:
+					dVec = v2co - v1co
+					
+				# If the dot is negative... we're moving back along the circle and we invert the step (move the vert toward the previous one in stead of away from it)
+				dot = v2co.dot(self.dVec)
+
+		
+# Casting loops is cool... hopefully it works well in bmesh! Yaya
+def cast_loop(bme=None):
+
+	if not bme:
+		bm = get_bmesh()
+	else:
+		bm = bme
+		
+	# Get a heap of lists to work with later!
+	selFaces = get_selected_faces(bm)
+	selVerts = get_selected_verts(bm)
+	outVerts = get_outer_verts(selFaces)
+	outEdges = get_outer_edges(selFaces)
+	cent = get_center(selFaces)
+	normal = get_normal(selFaces)
+	outCount = len(outVerts)
+	
+	# Let's quickly make a list of inner verts
+	inVerts = []
+	for v in selVerts:
+		if not v in outVerts:
+			inVerts.append(v)
+	
+	# make a quaternion and a matrix representing this "plane"
+	quat = normal.to_track_quat('-Z', 'Y')
+	mat = quat.to_matrix()
+
+	# Put all the verts in the plane...
+	# And.. find out for each vert how far it is along the normal
+	# Ang get the average distance from the center point
+	midDist = 0.0
+	for v in selVerts:
+		relPos = (v.co - cent)
+		relDot = normal.dot(relPos)
+		
+		v.co += (normal * (-relDot))
+		# If this is an outerVert... then we keep track of it's distance from the center
+		if v in outVerts:
+			midDist += relPos.length
+	
+	# The medium distance from the center point
+	midDist /= outCount 
+	
+	# now lets put them all the right distance from the center
+	top = False
+	topVert = False
+	for i,v in enumerate(outVerts):
+		relPos = v.co - cent
+		relPos = relPos.normalized() * midDist
+		v.co = relPos + cent
+		
+		# Find the top vert for nice alignment of the shape (start the steploop here)
+		if top is False or v.co[2] > top:
+			top = v.co[2]
+			topVert = i
+	
+	# As a final step... we want them to be rotated neatly around the center...
+	step = math.radians(360) / (outCount)
+	
+	# Now that we found the top vert we can start looping through to put them in the right position
+	# The first one we don't move... So lets find the second!
+	v1 = outVerts[topVert]
+	v1in = v1.index
+	v1co = v1.co - self.cent
+	self.doneVerts = [v1in]
+	
+	# Place the verts equidistantly around the midpoint
+	oVerts = [v1]
+	oRig = v1co
+	dVec = False
+	doneEdges = []
+	oVerts = loop_step(v1in,v1co,step,outEdges)
+		
+	if not bme:
 		put_bmesh(bm)
 	else:
 		return bm

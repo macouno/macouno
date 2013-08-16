@@ -130,7 +130,8 @@ class Cast_Loop():
 			if v.select and not v in self.outVerts:
 				self.inVerts.append(v)
 		
-
+		
+		
 		# make a quaternion and a matrix representing this "plane"
 		quat = normal.to_track_quat('-Z', 'Y')
 		mat = quat.to_matrix()
@@ -148,6 +149,9 @@ class Cast_Loop():
 		
 		# The medium distance from the center point
 		midDist /= vCount 
+		
+		
+		
 			
 		# now lets put them all the right distance from the center
 		top = False
@@ -165,6 +169,8 @@ class Cast_Loop():
 		
 		# As a final step... we want them to be rotated neatly around the center...
 		step = math.radians(360) / (vCount)
+		
+		''' GOT TO HERE ABOUTS CONVERTING TO BMESH '''
 		
 		# The first one we don't move... So lets find the second!
 		v1 = self.outVerts[topVert]

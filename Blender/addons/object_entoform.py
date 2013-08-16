@@ -744,8 +744,7 @@ class Entoform():
 		selection = string['selection']
 		self.doubleCheckSelection(selection)
 		
-		polygons = mesh_extras.get_selected_polygons()
-		formmatrix = mesh_extras.get_selection_matrix(polygons)
+		formmatrix = mesh_extras.get_selection_matrix()
 		
 		if selection['area'] == 'area':
 			
@@ -796,12 +795,12 @@ class Entoform():
 				
 				
 		# Make sure there's never more than 12 polygons we grow out of
-		if selection['area'] == 'polygons':
+		if selection['area'] != 'area':
 			#select_polygons.limit(selection['limit'], self.dnaString)
 			select_bmesh_faces.go(mode='LIMIT', key=self.dnaString)
 			
 		# If we still have something selected, then we need to check for Islands (only one coninuous island should be selected)
-		if selection['type'] == 'direction' and selection['area'] == 'area':
+		if selection['area'] == 'area':
 			
 			select_bmesh_faces.go(mode='ISLAND')
 			
