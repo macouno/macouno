@@ -202,11 +202,16 @@ class Entoform():
 						# Add relative intensity here (half the original + half the weight)
 						weight = baseWeight * self.getWeight(groupLen, action['scalin'])
 					
-					print(pad,'step ',stepText,action['name'])
-					
+					print(pad,'step ',stepText,action['name'], string['number'])
+					if string['number'] >= 1:
+						print('returning')
+						return
+					return
 					# Cast the selection to the correct shape please
-					bpy.ops.mesh.cast_loop(shape=action['loop_shape'], scale=1, scale_falloff='STR', corner_group='corner')
-					
+					bmesh_extras.cast_loop(corners=action['loop_corners'], scale=1.0, scale_falloff='STR')
+					#bpy.ops.mesh.cast_loop(shape=action['loop_shape'], scale=1, scale_falloff='STR', corner_group='corner')
+					print('continueing', string['number'])
+					return
 					# Since the matrix changes after casting... we acquire a fresh one now
 					##self.ob['growmatrix'] = mesh_extras.get_selection_matrix()
 					
@@ -450,7 +455,7 @@ class Entoform():
 				'type': 'bump',
 				'bumptype': 'BUM',
 				'bumpscale': 0.5, 
-				'loop_shape': 'CIR',
+				'loop_corners': 0,
 				'loops_scale': 1.0, 
 				'loop_falloff': 'STR',
 				'vertexcolor': (0.0,0.0,0.0),
@@ -467,7 +472,7 @@ class Entoform():
 				'type': 'bump',
 				'bumptype': 					self.choose('select','bumptypes','bump type'),
 				'bumpscale': 					self.choose('float','bumpscale','bump factor'),
-				'loop_shape':				self.choose('select', 'loopshapes', 'loop shape'),
+				'loop_corners':				self.choose('select', 'loopscorners', 'loop corners'),
 				'loop_scale':					self.choose('float', 'loopscale', 'loop scale'),
 				'loop_falloff':					self.choose('select', 'loopfalloffs', 'loop falloff'),
 				'vertexcolor': 					self.choose('select','palette','vertex color'),
@@ -494,7 +499,7 @@ class Entoform():
 				'rotation_falloff':				self.choose('select', 'falloffs', 'rotation falloff'),
 				'scale':								self.choose('float', 'scale', 'scale'),
 				'scale_falloff':					self.choose('select', 'falloffs', 'scale falloff'),
-				'loop_shape':				self.choose('select', 'loopshapes', 'loop shape'),
+				'loop_corners':				self.choose('select', 'loopcorners', 'loop corners'),
 				'loop_scale':					self.choose('float', 'loopscale', 'loop scale'),
 				'loop_falloff':					self.choose('select', 'loopfalloffs', 'loop falloff'),
 				'vertexcolor':					self.choose('select','palette', 'vertex color'),
@@ -1048,7 +1053,8 @@ class Entoform():
 		
 		self.options['bumptypes'] = {'a': 'BUM', 'b': 'SPI', 'c': 'DIM', 'd': 'PIM'}
 		
-		self.options['loopshapes'] = {'a': 'CIR', 'b': 'TRI', 'c': 'SQA'}
+		# Loop corners stands for 0 = circle, 3 = triangle, 4 = square
+		self.options['loopcorners'] = {'a': 0, 'b': 3, 'c': 4}
 		self.options['loopfalloffs'] = {'a': 'STR', 'b': 'BUM', 'c': 'SPI', 'd': 'SWE'}
 		
 		self.options['selectiontypes'] = {'a': 'direction', 'b': 'joint', 'c': 'all'}
@@ -1286,7 +1292,7 @@ class Entoform_init(bpy.types.Operator):
 	bl_options = {'REGISTER', 'UNDO'}
 	
 	d='Selina'
-	limit = 0
+	limit = 2
 
 	dnaString = StringProperty(name="DNA", description="DNA string to define your shape", default=d, maxlen=100)
 	

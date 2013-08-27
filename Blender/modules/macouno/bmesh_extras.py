@@ -1,4 +1,5 @@
 import bpy, bmesh, mathutils, math
+from macouno import misc, falloff_curve
 
 
 # Get the bmesh data from the current mesh object
@@ -179,14 +180,21 @@ def get_outer_edges(faces):
 			if not e in outEdges:
 			
 				 # Both the edge's verts should be connected to a non selected face
-				out = 0
+				outFound = False
 				for v in e.verts:
-					for f2 in v.link_faces:
-						if f2 in faces:
-							out += 1
-							break
-							
-				if out == 2:
+					if outFound is False:
+						for f2 in v.link_faces:
+							if not f2 in faces:
+								if outFound is False:
+									outFound = []
+								outFound.append(f2)
+					else:
+						for f2 in v.link_faces:
+							if f2 in outFound:
+								outFound = True
+								break
+					
+				if outFound is True:
 					outEdges.append(e)
 					
 	return outEdges
@@ -471,9 +479,7 @@ def color_limb(bme = None, col=None, jon=None, hard=None):
 		
 		
 # Find the next vert and place it the correct nr of degrees clockwise around the midpoint
-def loop_step(v1,step,outEdges, center, dVec):
-
-	v1co = v1.co - center
+def loop_step(v1,loopVerts, step,outEdges, center, dVec):
 
 	#Check both edges connected to this one
 	for e in v1.link_edges:
@@ -485,17 +491,37 @@ def loop_step(v1,step,outEdges, center, dVec):
 			else:
 				v2 = e.verts[0]
 				
+			v1co = v1.co - center
 			v2co = v2.co - center
 		
-				if dVec is False:
-					dVec = v2co - v1co
-					
-				# If the dot is negative... we're moving back along the circle and we invert the step (move the vert toward the previous one in stead of away from it)
-				dot = v2co.dot(self.dVec)
-
+			if dVec is False:
+				dVec = v2co - v1co
+				
+			# If the dot is negative... we're moving back along the circle and we invert the step (move the vert toward the previous one in stead of away from it)
+			dot = v2co.dot(dVec)
+			
+			if dot < 0.0:
+				v2co =  misc.rotate_vector_to_vector(v2co, v1co, -step)
+			else:
+				v2co =  misc.rotate_vector_to_vector(v2co, v1co, step)
+				
+			# Put the vert in the right position
+			v2.co = v2co + center
+			
+			outEdges.remove(e)
+			loopVerts.append(v2)
+			
+			dVec = v2co - v1co
+			outEdges, loopVerts = loop_step(v2, loopVerts, step, outEdges, center, dVec)
+			
+			break
+			
+	return outEdges, loopVerts
 		
 # Casting loops is cool... hopefully it works well in bmesh! Yaya
-def cast_loop(bme=None):
+# Scale can be a nr between 0.01 and 100.0
+# Scale falloff should be a curve shape. ('STR', 'Straight',''),('SPI', 'Spike',''),('BUM', 'Bump',''),('SWE', 'Sweep',''),
+def cast_loop(bme=None, corners=3, scale=1.0, scale_falloff='STR'):
 
 	if not bme:
 		bm = get_bmesh()
@@ -509,7 +535,6 @@ def cast_loop(bme=None):
 	outEdges = get_outer_edges(selFaces)
 	cent = get_center(selFaces)
 	normal = get_normal(selFaces)
-	outCount = len(outVerts)
 	
 	# Let's quickly make a list of inner verts
 	inVerts = []
@@ -535,7 +560,7 @@ def cast_loop(bme=None):
 			midDist += relPos.length
 	
 	# The medium distance from the center point
-	midDist /= outCount 
+	midDist /= len(outVerts) 
 	
 	# now lets put them all the right distance from the center
 	top = False
@@ -551,22 +576,105 @@ def cast_loop(bme=None):
 			topVert = i
 	
 	# As a final step... we want them to be rotated neatly around the center...
-	step = math.radians(360) / (outCount)
+	step = math.radians(360) / len(outEdges)
 	
 	# Now that we found the top vert we can start looping through to put them in the right position
-	# The first one we don't move... So lets find the second!
-	v1 = outVerts[topVert]
-	v1in = v1.index
-	v1co = v1.co - self.cent
-	self.doneVerts = [v1in]
+	loopVerts = [outVerts[topVert]]
+	outEdges, loopVerts = loop_step(outVerts[topVert],loopVerts,step,outEdges,cent,False)
 	
-	# Place the verts equidistantly around the midpoint
-	oVerts = [v1]
-	oRig = v1co
-	dVec = False
-	doneEdges = []
-	oVerts = loop_step(v1in,v1co,step,outEdges)
+	# At this point the shape of the loop should be a circle... so we can consider deforming it..
+	if corners:
+		c = 360.0 / corners
+		a = (180.0 - c) * 0.5
 		
+		stepLen = math.ceil(len(outVerts) / corners)
+		
+		aLine = False
+		
+		currentX = 0.0
+		vec = scale
+		factor = 1.0
+		curve = falloff_curve.curve(scale_falloff, 'mult')
+		
+		for i, v in enumerate(loopVerts):
+		
+			stepPos = i % stepLen
+			
+			# Get a normalized version of the current relative position
+			line = mathutils.Vector(v.co - cent).normalized()
+			
+			# Get the starting line as a reference (is also a corner
+			if not aLine:
+				aLine = line
+				currentX = 0.0
+				factor = 1.0
+				
+				#if corner_group: corner_group.add([v.index], 1.0, 'REPLACE')
+				
+			else:
+			
+				# Find the angle from the current starting line
+				cAng = aLine.angle(line)
+				
+				# If the angle is bigger than a step, we make this the new start
+				if cAng > math.radians(c):
+				
+					#if corner_group: corner_group.add([v.index], 1.0, 'REPLACE')
+					
+					# Make sure the angle is correct!
+					line =  misc.rotate_vector_to_vector(line, aLine, math.radians(c))
+					v.co = (line * midDist) + cent
+					aLine = line
+					
+					currentX = 0.0
+					factor = 1.0
+					
+				# These should all be midpoints along the line!
+				# make sure we don't do the last one... because it's the first one!
+				else:
+				
+					# Remove non corner items from the corner group
+					#if corner_group: corner_group.remove([v.index])
+					
+					# Only if we have to scale and the line isn't straight!
+					if scale != 1.0 and scale_falloff != 'STR':
+					
+						# Find out how far we are from the start as a factor (fraction of one?)
+						angFac = cAng / math.radians(c)
+						newX = angFac
+						
+						# Create a nice curve object to represent the falloff
+						
+						curve.update(1.0, 0.0, vec, currentX, newX)
+						
+						fac = abs(curve.currentVal)
+						
+						factor *= fac
+						
+						currentX = newX
+						
+					# Find the corner of the new triangle
+					b = 180 - (a+math.degrees(cAng))
+					
+					# find the distance from the midpoint
+					A = math.sin(math.radians(a)) / (math.sin(math.radians(b))/midDist)
+					
+					bLine = line * A
+					
+					bLine *= factor
+					
+					v.co = bLine + cent
+					
+	#for v in inVerts:
+	#	v.co = cent
+		
+	#for i in range(100):
+	# SMOOTH THE VERTS MAN!!!
+	bmesh.ops.smooth_vert(bm, verts=inVerts)
+	bmesh.ops.smooth_laplacian_vert(bm, verts=inVerts)
+	bmesh.ops.translate(bm, vec=mathutils.Vector((0.0,1.0,0.0)), verts=inVerts)
+	#mesh_extras.smooth_selection(inVerts, 2)
+				
 	if not bme:
 		put_bmesh(bm)
 	else:
