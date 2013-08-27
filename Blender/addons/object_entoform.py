@@ -203,15 +203,12 @@ class Entoform():
 						weight = baseWeight * self.getWeight(groupLen, action['scalin'])
 					
 					print(pad,'step ',stepText,action['name'], string['number'])
-					if string['number'] >= 1:
-						print('returning')
-						return
-					return
+
 					# Cast the selection to the correct shape please
 					bmesh_extras.cast_loop(corners=action['loop_corners'], scale=1.0, scale_falloff='STR')
 					#bpy.ops.mesh.cast_loop(shape=action['loop_shape'], scale=1, scale_falloff='STR', corner_group='corner')
-					print('continueing', string['number'])
-					return
+					#print('continueing', string['number'])
+					#return
 					# Since the matrix changes after casting... we acquire a fresh one now
 					##self.ob['growmatrix'] = mesh_extras.get_selection_matrix()
 					

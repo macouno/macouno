@@ -477,6 +477,27 @@ def color_limb(bme = None, col=None, jon=None, hard=None):
 	else:
 		return bm
 		
+	
+	
+# Smooth the position of the verts in this list based on their neighbours
+def smooth_verts(verts=None,loops=1):
+	
+	for i in range(loops):
+		for v1 in verts:
+			
+			cnt = 1
+			pos = mathutils.Vector(v1.co)
+			
+			for f in v1.link_faces:
+			
+				for v2 in f.verts:
+					
+					cnt += 1
+					pos += v2.co
+					
+			v1.co = pos / cnt
+	
+		
 		
 # Find the next vert and place it the correct nr of degrees clockwise around the midpoint
 def loop_step(v1,loopVerts, step,outEdges, center, dVec):
@@ -665,15 +686,17 @@ def cast_loop(bme=None, corners=3, scale=1.0, scale_falloff='STR'):
 					
 					v.co = bLine + cent
 					
-	#for v in inVerts:
-	#	v.co = cent
+	# I want to make sure these verts are inside the loop!
+	# So we move all verts halfway towards the center before smoothing (neat results in entoforms)
+	for v in inVerts:
+		relPos = cent - v.co
+		v.co += (relPos * 0.5)
 		
 	#for i in range(100):
 	# SMOOTH THE VERTS MAN!!!
-	bmesh.ops.smooth_vert(bm, verts=inVerts)
-	bmesh.ops.smooth_laplacian_vert(bm, verts=inVerts)
-	bmesh.ops.translate(bm, vec=mathutils.Vector((0.0,1.0,0.0)), verts=inVerts)
-	#mesh_extras.smooth_selection(inVerts, 2)
+	smooth_verts(verts=inVerts,loops=10)
+	#bmesh.ops.smooth_vert(bm, verts=inVerts,use_axis_x=True, use_axis_y=True, use_axis_z=True)
+
 				
 	if not bme:
 		put_bmesh(bm)
