@@ -518,8 +518,12 @@ def loop_step(v1,loopVerts, step,outEdges, center, dVec):
 			if dVec is False:
 				dVec = v2co - v1co
 				
+			relVec = v2co - v1co
+				
 			# If the dot is negative... we're moving back along the circle and we invert the step (move the vert toward the previous one in stead of away from it)
-			dot = v2co.dot(dVec)
+			dot = relVec.dot(dVec)
+			
+			#print(len(outEdges),'dot',dot)
 			
 			if dot < 0.0:
 				v2co =  misc.rotate_vector_to_vector(v2co, v1co, -step)
@@ -542,7 +546,7 @@ def loop_step(v1,loopVerts, step,outEdges, center, dVec):
 # Casting loops is cool... hopefully it works well in bmesh! Yaya
 # Scale can be a nr between 0.01 and 100.0
 # Scale falloff should be a curve shape. ('STR', 'Straight',''),('SPI', 'Spike',''),('BUM', 'Bump',''),('SWE', 'Sweep',''),
-def cast_loop(bme=None, corners=3, scale=1.0, scale_falloff='STR'):
+def cast_loop(bme=None, corners=0, scale=1.0, scale_falloff='STR'):
 
 	if not bme:
 		bm = get_bmesh()

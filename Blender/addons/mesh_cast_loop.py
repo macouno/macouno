@@ -312,8 +312,10 @@ class Cast_Loop():
 				if self.dVec is False:
 					self.dVec = v2co - v1co
 					
+				relVec = v2co - v1co
+					
 				# If the dot is negative... we're moving back along the circle and we invert the step (move the vert toward the previous one in stead of away from it)
-				dot = v2co.dot(self.dVec)
+				dot = relVec.dot(self.dVec)
 				
 				#pre = v2co.angle(self.oRig)
 				if dot < 0.0:

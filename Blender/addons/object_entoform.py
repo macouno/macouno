@@ -204,6 +204,8 @@ class Entoform():
 					
 					print(pad,'step ',stepText,action['name'], string['number'])
 
+					#if string['number'] >= 2:
+					#	return
 					# Cast the selection to the correct shape please
 					bmesh_extras.cast_loop(corners=action['loop_corners'], scale=1.0, scale_falloff='STR')
 					#bpy.ops.mesh.cast_loop(shape=action['loop_shape'], scale=1, scale_falloff='STR', corner_group='corner')
@@ -1289,7 +1291,7 @@ class Entoform_init(bpy.types.Operator):
 	bl_options = {'REGISTER', 'UNDO'}
 	
 	d='Selina'
-	limit = 2
+	limit = 0
 
 	dnaString = StringProperty(name="DNA", description="DNA string to define your shape", default=d, maxlen=100)
 	
