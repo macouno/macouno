@@ -224,7 +224,8 @@ class Cast_Loop():
 					self.currentX = 0.0
 					self.factor = 1.0
 					
-					if corner_group: corner_group.add([v.index], 1.0, 'REPLACE')
+					if corner_group:
+						corner_group.add([v.index], 1.0, 'REPLACE')
 					
 				else:
 				

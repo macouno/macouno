@@ -64,7 +64,7 @@ def has_selected(bm):
 	
 	
 # Crease all edges sharper than 60 degrees (1 radians-ish)
-def crease_edges(sharpness='', limit=1.0, group=None):
+def crease_edges(sharpness=0.0, limit=1.0, group=None):
 	
 	bm = get_bmesh()
 	
@@ -90,12 +90,15 @@ def crease_edges(sharpness='', limit=1.0, group=None):
 		
 			# See if both verts on this edge are in the corner group
 			fnd = 0
+			avg = 0.0
 			for v in e.verts:
-				if gi in v[group_lay]:
+				if gi in v[group_lay] and v[group_lay][gi] > 0.0:
 					fnd += 1
+					avg += v[group_lay][gi]
 					
+			# If it's in a group we use the weight value!
 			if fnd ==  2:
-				e[crease_lay] = sharpness
+				e[crease_lay] = avg * 0.5
 			else:
 				e[crease_lay] = 0.0				
 				
@@ -319,7 +322,7 @@ def get_cluster(face=None, faces=None, limit=8):
 	
 	
 # Add a faces in a list to a vertex group
-def add_to_group(bme=None, faces=None, newGroup=True, groupName='group'):
+def add_to_group(bme=None, faces=None, verts=None, newGroup=True, groupName='group', weight=1.0):
 		
 	if not bme:
 		bm = get_bmesh()
@@ -327,8 +330,12 @@ def add_to_group(bme=None, faces=None, newGroup=True, groupName='group'):
 		bm = bme
 	
 	# If no faces are supplied make a new list from the selection
-	if not faces:
+	if not faces and not verts:
 		faces = [f for f in bm.faces if f.select]
+		
+	# If faces is not yet a list with items... we use all faces!
+	if not faces or not len(faces):
+		faces = bm.faces
 		
 	dvert_lay = bm.verts.layers.deform.active
 	if dvert_lay is None: dvert_lay = bm.verts.layers.deform.new()
@@ -340,7 +347,8 @@ def add_to_group(bme=None, faces=None, newGroup=True, groupName='group'):
 	else:
 		# Try to retrieve the vertex group, and if we can't make a new one anyway
 		try:
-			group_index = bpy.context.active_object.vertex_groups[groupName]
+			group = bpy.context.active_object.vertex_groups[groupName]
+			group_index = group.index
 		except:
 			group = bpy.context.active_object.vertex_groups.new(groupName)
 			group_index = group.index
@@ -348,7 +356,9 @@ def add_to_group(bme=None, faces=None, newGroup=True, groupName='group'):
 	# Put all verts of the faces in this group!
 	for f in faces:
 		for v in f.verts:
-			v[dvert_lay][group_index] =1.0
+			# If a list of verts is provided... we make sure the vert is in it
+			if verts is None or v in verts:
+				v[dvert_lay][group_index] = weight
 			
 	if not bme:
 		put_bmesh(bm)
@@ -546,7 +556,8 @@ def loop_step(v1,loopVerts, step,outEdges, center, dVec):
 # Casting loops is cool... hopefully it works well in bmesh! Yaya
 # Scale can be a nr between 0.01 and 100.0
 # Scale falloff should be a curve shape. ('STR', 'Straight',''),('SPI', 'Spike',''),('BUM', 'Bump',''),('SWE', 'Sweep',''),
-def cast_loop(bme=None, corners=0, scale=1.0, scale_falloff='STR'):
+# corner_group = Name of a group you want all corners to be added to
+def cast_loop(bme=None, corners=0, falloff_scale=1.0, falloff_shape='STR',corner_group=None):
 
 	if not bme:
 		bm = get_bmesh()
@@ -607,8 +618,16 @@ def cast_loop(bme=None, corners=0, scale=1.0, scale_falloff='STR'):
 	loopVerts = [outVerts[topVert]]
 	outEdges, loopVerts = loop_step(outVerts[topVert],loopVerts,step,outEdges,cent,False)
 	
-	# At this point the shape of the loop should be a circle... so we can consider deforming it..
+
+	# Set corner group weight to 0.0 because the shape is a circle (will be reset to 1.0 later for the actual corners)
+	if not corner_group is None:
+		bm, group_index = add_to_group(bme=bm,verts=outVerts, newGroup=False, groupName=corner_group, weight=0.0)
+			
 	if corners:
+	
+		# Initiate a list of all corner verts so we can set the weight accordingly later (best done in one move)
+		cornerVerts = []
+		
 		c = 360.0 / corners
 		a = (180.0 - c) * 0.5
 		
@@ -617,9 +636,9 @@ def cast_loop(bme=None, corners=0, scale=1.0, scale_falloff='STR'):
 		aLine = False
 		
 		currentX = 0.0
-		vec = scale
+		vec = falloff_scale
 		factor = 1.0
-		curve = falloff_curve.curve(scale_falloff, 'mult')
+		curve = falloff_curve.curve(falloff_shape, 'mult')
 		
 		for i, v in enumerate(loopVerts):
 		
@@ -635,6 +654,8 @@ def cast_loop(bme=None, corners=0, scale=1.0, scale_falloff='STR'):
 				factor = 1.0
 				
 				#if corner_group: corner_group.add([v.index], 1.0, 'REPLACE')
+				if corner_group:
+					cornerVerts.append(v)
 				
 			else:
 			
@@ -645,6 +666,8 @@ def cast_loop(bme=None, corners=0, scale=1.0, scale_falloff='STR'):
 				if cAng > math.radians(c):
 				
 					#if corner_group: corner_group.add([v.index], 1.0, 'REPLACE')
+					if corner_group:
+						cornerVerts.append(v)
 					
 					# Make sure the angle is correct!
 					line =  misc.rotate_vector_to_vector(line, aLine, math.radians(c))
@@ -662,7 +685,7 @@ def cast_loop(bme=None, corners=0, scale=1.0, scale_falloff='STR'):
 					#if corner_group: corner_group.remove([v.index])
 					
 					# Only if we have to scale and the line isn't straight!
-					if scale != 1.0 and scale_falloff != 'STR':
+					if falloff_scale != 1.0 and falloff_shape != 'STR':
 					
 						# Find out how far we are from the start as a factor (fraction of one?)
 						angFac = cAng / math.radians(c)
@@ -689,6 +712,10 @@ def cast_loop(bme=None, corners=0, scale=1.0, scale_falloff='STR'):
 					bLine *= factor
 					
 					v.co = bLine + cent
+					
+		if len(cornerVerts):
+			bm, group_index = add_to_group(bme=bm,verts=cornerVerts, newGroup=False, groupName=corner_group, weight=1.0)
+		
 					
 	# I want to make sure these verts are inside the loop!
 	# So we move all verts halfway towards the center before smoothing (neat results in entoforms)

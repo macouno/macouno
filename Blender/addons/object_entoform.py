@@ -88,7 +88,7 @@ class Entoform():
 		
 		# Add self shadow (after the first subdivision)!
 		bpy.ops.object.mode_set(mode='VERTEX_PAINT')
-		bpy.ops.paint.self_shadow(contrast=3.0,method='EDG',normalize=True)
+		bpy.ops.paint.self_shadow(contrast=3.0,method='EDG',normalize=False)
 		
 		# Subsurf the first time if required
 		if subdivide:
@@ -204,19 +204,11 @@ class Entoform():
 					
 					print(pad,'step ',stepText,action['name'], string['number'])
 
-					#if string['number'] >= 2:
-					#	return
 					# Cast the selection to the correct shape please
-					bmesh_extras.cast_loop(corners=action['loop_corners'], scale=1.0, scale_falloff='STR')
-					#bpy.ops.mesh.cast_loop(shape=action['loop_shape'], scale=1, scale_falloff='STR', corner_group='corner')
-					#print('continueing', string['number'])
-					#return
-					# Since the matrix changes after casting... we acquire a fresh one now
-					##self.ob['growmatrix'] = mesh_extras.get_selection_matrix()
+					bmesh_extras.cast_loop(corners=action['loop_corners'], falloff_scale=action['loop_scale'], falloff_shape=action['loop_shape'],corner_group='corner')
 					
 					bpy.ops.object.mode_set(mode='EDIT')
 					
-					#print('c')
 					if action['type'] == 'bump':
 					
 						bpy.ops.mesh.bump(
@@ -473,7 +465,7 @@ class Entoform():
 				'bumpscale': 					self.choose('float','bumpscale','bump factor'),
 				'loop_corners':				self.choose('select', 'loopscorners', 'loop corners'),
 				'loop_scale':					self.choose('float', 'loopscale', 'loop scale'),
-				'loop_falloff':					self.choose('select', 'loopfalloffs', 'loop falloff'),
+				'loop_shape':				self.choose('select', 'loopshapes', 'loop shape'),
 				'vertexcolor': 					self.choose('select','palette','vertex color'),
 				'jointcolor': 						self.choose('select','palette','joint color'),
 				'colorstyle': 					self.choose('select','colorstyles','color style'),
@@ -500,7 +492,7 @@ class Entoform():
 				'scale_falloff':					self.choose('select', 'falloffs', 'scale falloff'),
 				'loop_corners':				self.choose('select', 'loopcorners', 'loop corners'),
 				'loop_scale':					self.choose('float', 'loopscale', 'loop scale'),
-				'loop_falloff':					self.choose('select', 'loopfalloffs', 'loop falloff'),
+				'loop_shape':				self.choose('select', 'loopshapes', 'loop shape'),
 				'vertexcolor':					self.choose('select','palette', 'vertex color'),
 				'jointcolor': 						self.choose('select','palette','joint color'),
 				'colorstyle': 					self.choose('select','colorstyles','color style'),
@@ -1054,7 +1046,7 @@ class Entoform():
 		
 		# Loop corners stands for 0 = circle, 3 = triangle, 4 = square
 		self.options['loopcorners'] = {'a': 0, 'b': 3, 'c': 4}
-		self.options['loopfalloffs'] = {'a': 'STR', 'b': 'BUM', 'c': 'SPI', 'd': 'SWE'}
+		self.options['loopshapes'] = {'a': 'STR', 'b': 'BUM', 'c': 'SPI', 'd': 'SWE'}
 		
 		self.options['selectiontypes'] = {'a': 'direction', 'b': 'joint', 'c': 'all'}
 		self.options['selectioneyes'] = {'a': 'direction', 'b': 'joint', 'c': 'all'}
