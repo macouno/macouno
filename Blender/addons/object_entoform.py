@@ -345,7 +345,7 @@ class Entoform():
 		self.stringCount += 1
 		
 		
-		
+		'''
 		# Make a tail!
 		print("\n - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n")
 		print((self.stringCount+1),"Making nr",(self.stringCount+1),"DNA string for the tail\n")
@@ -358,7 +358,7 @@ class Entoform():
 		self.dna['strings'][1]['strings'].append(string)
 		self.stringCount += 1
 		
-		
+		'''
 		
 		# Make some legs (well hopefully)
 		print("\n - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n")
@@ -374,6 +374,7 @@ class Entoform():
 		self.dna['strings'][1]['strings'].append(legString)
 		self.stringCount += 1
 		
+		'''
 		# First make lower legs (BEFORE MIRRORING!)
 		# Lower legs
 		print("\n - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n")
@@ -386,16 +387,17 @@ class Entoform():
 		self.dna['strings'][1]['strings'][1]['strings'].append(string)
 		self.stringCount += 1		
 		
-		
+		'''
 		# Mirror the legs
 		if True:
 			string = self.mirrorDNA(legAction, legSelection, 3)
 			self.dna['strings'][1]['strings'].append(string)
-		
+			
+		'''
 			#Mirror the lower legs (set to false to stop... yay)
 			string = self.mirrorDNA(lowerAction, lowerSelection, 3)
 			self.dna['strings'][1]['strings'][2]['strings'].append(string)
-
+			'''
 		'''
 		# SUB body!
 		print("\n - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n")
@@ -738,17 +740,20 @@ class Entoform():
 	def addToNewGroups(self, string, newGroups, growmatrices=[]):
 	
 		selection = string['selection']
-		self.doubleCheckSelection(selection)
 		
 		formmatrix = mesh_extras.get_selection_matrix()
 		
 		if selection['area'] == 'area':
 			
+			# make sure we have one continuous island selected
+			select_bmesh_faces.go(mode='ISLAND')
+			
 			addedGroup = bmesh_extras.add_to_group(newGroup=True, groupName=string['name'])
 			addedGroups = [addedGroup]
 		
 		else:
-			addedGroups = bmesh_extras.cluster_selection(limit=9, groupName=string['name'])
+			addedGroups = bmesh_extras.cluster_selection(limit=self.clusterSize, groupName=string['name'])
+			#print('made',len(addedGroups),'groups')
 		
 		#addGroups, addMatrices = mesh_extras.group_selection(area = selection['area'], name=string['name'],chunkProduct=4, chunkLimit=selection['limit'])
 		
@@ -783,23 +788,7 @@ class Entoform():
 		newGroup.add(vList, 1.0, 'REPLACE')
 			
 		return baseGroupList
-		
-		
-		
-	# Just some nice checks to do with selections
-	def doubleCheckSelection(self, selection):
-				
-				
-		# Make sure there's never more than 12 polygons we grow out of
-		if selection['area'] != 'area':
-			#select_polygons.limit(selection['limit'], self.dnaString)
-			select_bmesh_faces.go(mode='LIMIT', key=self.dnaString)
-			
-		# If we still have something selected, then we need to check for Islands (only one coninuous island should be selected)
-		if selection['area'] == 'area':
-			
-			select_bmesh_faces.go(mode='ISLAND')
-			
+
 	
 	
 	# Make relative weights for the verts
@@ -991,6 +980,12 @@ class Entoform():
 		self.dnaString = dnaString
 		self.steplimit = steplimit
 		
+		r = round(math.sqrt(math.sqrt(len(self.me.polygons))))
+		self.clusterSize = r * r
+		print('Settingcluster to',self.clusterSize)
+		
+		#self.clusterSize = math.floor(math.sqrt(math.sqrt(len(self.me.polygons))))
+		
 		# Split the dna string into two parts if possible
 		prt = dnaString.partition(' ')
 		if not prt[2]:
@@ -1023,7 +1018,7 @@ class Entoform():
 			'scale': {'min': 0.4, 'max': 0.7},
 			'crease': {'min': 0.4, 'max': 0.7},
 			'bumpscale': {'min': 0.4, 'max': 0.7},
-			'loopscale': {'min': 0.3, 'max': 1.3},
+			'loopscale': {'min': 0.5, 'max': 1.1},
 			'rotation': {'min': math.radians(-60.0), 'max': math.radians(60.0)},
 			'divergence': {'min': math.radians(45),'max': math.radians(75)},
 			'limit': {'min': 3, 'max': 6},
@@ -1045,7 +1040,7 @@ class Entoform():
 		self.options['bumptypes'] = {'a': 'BUM', 'b': 'SPI', 'c': 'DIM', 'd': 'PIM'}
 		
 		# Loop corners stands for 0 = circle, 3 = triangle, 4 = square
-		self.options['loopcorners'] = {'a': 0, 'b': 3, 'c': 4}
+		self.options['loopcorners'] = {'a': 0, 'b': 3, 'c': 4, 'd': 0}
 		self.options['loopshapes'] = {'a': 'STR', 'b': 'BUM', 'c': 'SPI', 'd': 'SWE'}
 		
 		self.options['selectiontypes'] = {'a': 'direction', 'b': 'joint', 'c': 'all'}

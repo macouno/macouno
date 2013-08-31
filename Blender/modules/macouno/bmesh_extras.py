@@ -381,6 +381,8 @@ def cluster_selection(limit=8,groupName='cluster'):
 	faceCounter = 0
 	cluster = []
 	
+	#print('clustering',len(selFaces),'faces')
+	
 	# Try to use up all selected faces (break gets us out if no more options are found)
 	while len(selFaces):
 		
@@ -572,161 +574,163 @@ def cast_loop(bme=None, corners=0, falloff_scale=1.0, falloff_shape='STR',corner
 	cent = get_center(selFaces)
 	normal = get_normal(selFaces)
 	
-	# Let's quickly make a list of inner verts
-	inVerts = []
-	for v in selVerts:
-		if not v in outVerts:
-			inVerts.append(v)
+	if len(outVerts):
 	
-	# make a quaternion and a matrix representing this "plane"
-	quat = normal.to_track_quat('-Z', 'Y')
-	mat = quat.to_matrix()
+		# Let's quickly make a list of inner verts
+		inVerts = []
+		for v in selVerts:
+			if not v in outVerts:
+				inVerts.append(v)
+		
+		# make a quaternion and a matrix representing this "plane"
+		quat = normal.to_track_quat('-Z', 'Y')
+		mat = quat.to_matrix()
 
-	# Put all the verts in the plane...
-	# And.. find out for each vert how far it is along the normal
-	# Ang get the average distance from the center point
-	midDist = 0.0
-	for v in selVerts:
-		relPos = (v.co - cent)
-		relDot = normal.dot(relPos)
+		# Put all the verts in the plane...
+		# And.. find out for each vert how far it is along the normal
+		# Ang get the average distance from the center point
+		midDist = 0.0
+		for v in selVerts:
+			relPos = (v.co - cent)
+			relDot = normal.dot(relPos)
+			
+			v.co += (normal * (-relDot))
+			# If this is an outerVert... then we keep track of it's distance from the center
+			if v in outVerts:
+				midDist += relPos.length
 		
-		v.co += (normal * (-relDot))
-		# If this is an outerVert... then we keep track of it's distance from the center
-		if v in outVerts:
-			midDist += relPos.length
-	
-	# The medium distance from the center point
-	midDist /= len(outVerts) 
-	
-	# now lets put them all the right distance from the center
-	top = False
-	topVert = False
-	for i,v in enumerate(outVerts):
-		relPos = v.co - cent
-		relPos = relPos.normalized() * midDist
-		v.co = relPos + cent
+		# The medium distance from the center point
+		midDist /= len(outVerts) 
 		
-		# Find the top vert for nice alignment of the shape (start the steploop here)
-		if top is False or v.co[2] > top:
-			top = v.co[2]
-			topVert = i
-	
-	# As a final step... we want them to be rotated neatly around the center...
-	step = math.radians(360) / len(outEdges)
-	
-	# Now that we found the top vert we can start looping through to put them in the right position
-	loopVerts = [outVerts[topVert]]
-	outEdges, loopVerts = loop_step(outVerts[topVert],loopVerts,step,outEdges,cent,False)
-	
+		# now lets put them all the right distance from the center
+		top = False
+		topVert = False
+		for i,v in enumerate(outVerts):
+			relPos = v.co - cent
+			relPos = relPos.normalized() * midDist
+			v.co = relPos + cent
+			
+			# Find the top vert for nice alignment of the shape (start the steploop here)
+			if top is False or v.co[2] > top:
+				top = v.co[2]
+				topVert = i
+		
+		# As a final step... we want them to be rotated neatly around the center...
+		step = math.radians(360) / (len(outEdges)+1)
+		
+		# Now that we found the top vert we can start looping through to put them in the right position
+		loopVerts = [outVerts[topVert]]
+		outEdges, loopVerts = loop_step(outVerts[topVert],loopVerts,step,outEdges,cent,False)
+		
 
-	# Set corner group weight to 0.0 because the shape is a circle (will be reset to 1.0 later for the actual corners)
-	if not corner_group is None:
-		bm, group_index = add_to_group(bme=bm,verts=outVerts, newGroup=False, groupName=corner_group, weight=0.0)
-			
-	if corners:
-	
-		# Initiate a list of all corner verts so we can set the weight accordingly later (best done in one move)
-		cornerVerts = []
-		
-		c = 360.0 / corners
-		a = (180.0 - c) * 0.5
-		
-		stepLen = math.ceil(len(outVerts) / corners)
-		
-		aLine = False
-		
-		currentX = 0.0
-		vec = falloff_scale
-		factor = 1.0
-		curve = falloff_curve.curve(falloff_shape, 'mult')
-		
-		for i, v in enumerate(loopVerts):
-		
-			stepPos = i % stepLen
-			
-			# Get a normalized version of the current relative position
-			line = mathutils.Vector(v.co - cent).normalized()
-			
-			# Get the starting line as a reference (is also a corner
-			if not aLine:
-				aLine = line
-				currentX = 0.0
-				factor = 1.0
+		# Set corner group weight to 0.0 because the shape is a circle (will be reset to 1.0 later for the actual corners)
+		if not corner_group is None:
+			bm, group_index = add_to_group(bme=bm,verts=outVerts, newGroup=False, groupName=corner_group, weight=0.0)
 				
-				#if corner_group: corner_group.add([v.index], 1.0, 'REPLACE')
-				if corner_group:
-					cornerVerts.append(v)
-				
-			else:
+		if corners:
+		
+			# Initiate a list of all corner verts so we can set the weight accordingly later (best done in one move)
+			cornerVerts = []
 			
-				# Find the angle from the current starting line
-				cAng = aLine.angle(line)
+			c = 360.0 / corners
+			a = (180.0 - c) * 0.5
+			
+			stepLen = math.ceil(len(outVerts) / corners)
+			
+			aLine = False
+			
+			currentX = 0.0
+			vec = falloff_scale
+			factor = 1.0
+			curve = falloff_curve.curve(falloff_shape, 'mult')
+			
+			for i, v in enumerate(loopVerts):
+			
+				stepPos = i % stepLen
 				
-				# If the angle is bigger than a step, we make this the new start
-				if cAng > math.radians(c):
+				# Get a normalized version of the current relative position
+				line = mathutils.Vector(v.co - cent).normalized()
 				
+				# Get the starting line as a reference (is also a corner
+				if not aLine:
+					aLine = line
+					currentX = 0.0
+					factor = 1.0
+					
 					#if corner_group: corner_group.add([v.index], 1.0, 'REPLACE')
 					if corner_group:
 						cornerVerts.append(v)
 					
-					# Make sure the angle is correct!
-					line =  misc.rotate_vector_to_vector(line, aLine, math.radians(c))
-					v.co = (line * midDist) + cent
-					aLine = line
-					
-					currentX = 0.0
-					factor = 1.0
-					
-				# These should all be midpoints along the line!
-				# make sure we don't do the last one... because it's the first one!
 				else:
 				
-					# Remove non corner items from the corner group
-					#if corner_group: corner_group.remove([v.index])
+					# Find the angle from the current starting line
+					cAng = aLine.angle(line)
 					
-					# Only if we have to scale and the line isn't straight!
-					if falloff_scale != 1.0 and falloff_shape != 'STR':
+					# If the angle is bigger than a step, we make this the new start
+					if cAng > math.radians(c):
 					
-						# Find out how far we are from the start as a factor (fraction of one?)
-						angFac = cAng / math.radians(c)
-						newX = angFac
+						#if corner_group: corner_group.add([v.index], 1.0, 'REPLACE')
+						if corner_group:
+							cornerVerts.append(v)
 						
-						# Create a nice curve object to represent the falloff
+						# Make sure the angle is correct!
+						line =  misc.rotate_vector_to_vector(line, aLine, math.radians(c))
+						v.co = (line * midDist) + cent
+						aLine = line
 						
-						curve.update(1.0, 0.0, vec, currentX, newX)
+						currentX = 0.0
+						factor = 1.0
 						
-						fac = abs(curve.currentVal)
+					# These should all be midpoints along the line!
+					# make sure we don't do the last one... because it's the first one!
+					else:
+					
+						# Remove non corner items from the corner group
+						#if corner_group: corner_group.remove([v.index])
 						
-						factor *= fac
+						# Only if we have to scale and the line isn't straight!
+						if falloff_scale != 1.0 and falloff_shape != 'STR':
 						
-						currentX = newX
+							# Find out how far we are from the start as a factor (fraction of one?)
+							angFac = cAng / math.radians(c)
+							newX = angFac
+							
+							# Create a nice curve object to represent the falloff
+							
+							curve.update(1.0, 0.0, vec, currentX, newX)
+							
+							fac = abs(curve.currentVal)
+							
+							factor *= fac
+							
+							currentX = newX
+							
+						# Find the corner of the new triangle
+						b = 180 - (a+math.degrees(cAng))
 						
-					# Find the corner of the new triangle
-					b = 180 - (a+math.degrees(cAng))
-					
-					# find the distance from the midpoint
-					A = math.sin(math.radians(a)) / (math.sin(math.radians(b))/midDist)
-					
-					bLine = line * A
-					
-					bLine *= factor
-					
-					v.co = bLine + cent
-					
-		if len(cornerVerts):
-			bm, group_index = add_to_group(bme=bm,verts=cornerVerts, newGroup=False, groupName=corner_group, weight=1.0)
-		
-					
-	# I want to make sure these verts are inside the loop!
-	# So we move all verts halfway towards the center before smoothing (neat results in entoforms)
-	for v in inVerts:
-		relPos = cent - v.co
-		v.co += (relPos * 0.5)
-		
-	#for i in range(100):
-	# SMOOTH THE VERTS MAN!!!
-	smooth_verts(verts=inVerts,loops=10)
-	#bmesh.ops.smooth_vert(bm, verts=inVerts,use_axis_x=True, use_axis_y=True, use_axis_z=True)
+						# find the distance from the midpoint
+						A = math.sin(math.radians(a)) / (math.sin(math.radians(b))/midDist)
+						
+						bLine = line * A
+						
+						bLine *= factor
+						
+						v.co = bLine + cent
+						
+			if len(cornerVerts):
+				bm, group_index = add_to_group(bme=bm,verts=cornerVerts, newGroup=False, groupName=corner_group, weight=1.0)
+			
+						
+		# I want to make sure these verts are inside the loop!
+		# So we move all verts halfway towards the center before smoothing (neat results in entoforms)
+		for v in inVerts:
+			relPos = cent - v.co
+			v.co += (relPos * 0.5)
+			
+		#for i in range(100):
+		# SMOOTH THE VERTS MAN!!!
+		smooth_verts(verts=inVerts,loops=10)
+		#bmesh.ops.smooth_vert(bm, verts=inVerts,use_axis_x=True, use_axis_y=True, use_axis_z=True)
 
 				
 	if not bme:
