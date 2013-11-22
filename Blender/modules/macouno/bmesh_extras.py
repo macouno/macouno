@@ -55,12 +55,73 @@ def get_selected_verts(bm):
 	
 
 # See if a  bmesh has any selected faces at all (make sure you return as soon as you find one)
-def has_selected(bm):
+def has_selected(bm=None):
 	for f in bm.faces:
 		if f.select:
 			return True
 	return False
 	
+	
+	
+# Convert this bmesh to lists that can be converted to a string if need be
+def convert_to_lists(bm=None):
+
+	if not bm:
+		bm = get_bmesh()
+		
+	verts = [[v.co[0],v.co[1],v.co[2],v.select] for v in bm.verts]
+	edges = [[e.verts[0].index, e.verts[1].index, e.select] for e in bm.edges]
+	faces = []
+	
+	for f in bm.faces:
+		face = []
+		for v in f.verts:
+			face.append(v.index)
+		face.append(f.select)
+		faces.append(face)
+
+	return verts, edges, faces
+	
+	
+	
+# Create a brand new bmesh from lists of verts edges and faces
+def create_from_lists(bm=None,verts=None,edges=None,faces=None):
+	
+	if not bm:
+		bm = bmesh.new()
+		
+	vSel = []
+	for i,v in enumerate(verts):
+		vN = bm.verts.new((v[0], v[1], v[2]))
+		if v[3]:
+			vSel.append(i)
+		
+	eSel = []
+	for i, e in enumerate(edges):
+		eN = bm.edges.new((bm.verts[e[0]],bm.verts[e[1]]))
+		if e[2]:
+			eSel.append(i)
+		
+	for f in faces:
+		seq = []
+		fLen = len(f) - 1
+		for i, v in enumerate(f):
+			if not i == fLen:
+				seq.append(bm.verts[v])
+		fN = bm.faces.new(seq)
+		fN.select = f[fLen]
+		
+	# Select the edges and faces if nessecary
+	for i in eSel:
+		bm.edges[i].select = True
+		
+	for i in vSel:
+		bm.verts[i].select = True
+		
+	me= bpy.data.meshes['Cube']
+	bm.to_mesh(me)
+	bm.free()
+		
 	
 	
 # Crease all edges sharper than 60 degrees (1 radians-ish)
