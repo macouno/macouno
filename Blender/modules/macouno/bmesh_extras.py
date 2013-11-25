@@ -397,9 +397,14 @@ def add_to_group(bme=None, faces=None, verts=None, newGroup=True, groupName='gro
 	# If faces is not yet a list with items... we use all faces!
 	if not faces or not len(faces):
 		faces = bm.faces
-		
+	
 	dvert_lay = bm.verts.layers.deform.active
-	if dvert_lay is None: dvert_lay = bm.verts.layers.deform.new()
+	if dvert_lay is None:
+		if len(verts): verts = [v.index for v in verts]
+		if len(faces): faces = [f.index for f in faces]
+		dvert_lay = bm.verts.layers.deform.new()
+		if len(verts): verts = [bm.verts[v] for v in verts]
+		if len(faces): faces = [bm.faces[f] for f in faces]
 	
 	# Create a new vertex group if required
 	if newGroup:
@@ -414,12 +419,19 @@ def add_to_group(bme=None, faces=None, verts=None, newGroup=True, groupName='gro
 			group = bpy.context.active_object.vertex_groups.new(groupName)
 			group_index = group.index
 	
-	# Put all verts of the faces in this group!
-	for f in faces:
-		for v in f.verts:
-			# If a list of verts is provided... we make sure the vert is in it
-			if verts is None or v in verts:
+	# Making sure we can just add verts too!
+	if not faces or not len(faces):
+		if len(verts):
+			for v in verts:
 				v[dvert_lay][group_index] = weight
+			
+	else:
+		# Put all verts of the faces in this group!
+		for f in faces:
+			for v in f.verts:
+				# If a list of verts is provided... we make sure the vert is in it
+				if verts is None or v in verts:
+					v[dvert_lay][group_index] = weight
 			
 	if not bme:
 		put_bmesh(bm)

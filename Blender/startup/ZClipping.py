@@ -15,6 +15,8 @@ def ZClipUpdate(context):
 
 	from macouno import bmesh_extras
 	
+	bm = bmesh_extras.get_bmesh()
+	
 	nz = ob.zclip_newz
 	oz = ob.zclip_oldz
 	if not nz == oz:
@@ -23,14 +25,13 @@ def ZClipUpdate(context):
 		b = ob.zclip_buf * 0.5
 		hidden = []
 		
-		bm = bmesh_extras.get_bmesh()
-		
 		if len(bm.verts):
 			for v in bm.verts:
 				if abs(v.co[2] - nz) <= b:
 					v.hide = False
 				else:
 					v.hide = True
+					v.select = False
 					hidden.append(v)
 				
 		if len(hidden) and len(bm.edges):
@@ -39,6 +40,7 @@ def ZClipUpdate(context):
 				for v in hidden:
 					if v in e.verts:
 						e.hide = True
+						e.select = False
 						break
 						
 		if len(hidden) and len(bm.faces):
@@ -47,9 +49,20 @@ def ZClipUpdate(context):
 				for v in hidden:
 					if v in f.verts:
 						f.hide = True
+						f.select = False
 						break
 		
-		bmesh_extras.put_bmesh(bm)
+
+	try:
+		ex = bm.verts.layers.float['extrusions']
+
+		for i, e in enumerate(bm.edges):
+			if e.select:
+				ob.edgetrusion = e.verts[0][ex]
+	except:
+		pass
+		
+	bmesh_extras.put_bmesh(bm)
 
 
 
@@ -76,6 +89,8 @@ class ZClipPanel(bpy.types.Panel):
 		row.prop(ob,'zclip_newz')
 		row = layout.row()
 		row.prop(ob,'zclip_buf')
+		row = layout.row()
+		row.prop(ob,'edgetrusion')
 		
 	def update(self,context):
 		print('UPDATE')
@@ -87,9 +102,10 @@ def register():
 	bpy.utils.register_class(ZClipPanel)
 	
 	bpy.types.Object.zclip_enabled = bpy.props.BoolProperty(default=False,name="Enabled")
-	bpy.types.Object.zclip_newz = bpy.props.FloatProperty(default=0.0,name="Z", precision=2,unit="LENGTH")
-	bpy.types.Object.zclip_oldz = bpy.props.FloatProperty(default=0.0,name="OLDZ", precision=2,unit="LENGTH")
-	bpy.types.Object.zclip_buf = bpy.props.FloatProperty(default=0.25,name="Buffer", precision=2,unit="LENGTH")
+	bpy.types.Object.zclip_newz = bpy.props.FloatProperty(default=0.0,name="Z", precision=3,unit="LENGTH")
+	bpy.types.Object.zclip_oldz = bpy.props.FloatProperty(default=0.0,name="OLDZ", precision=3,unit="LENGTH")
+	bpy.types.Object.zclip_buf = bpy.props.FloatProperty(default=0.25,name="Buffer", precision=3,unit="LENGTH")
+	bpy.types.Object.edgetrusion = bpy.props.FloatProperty(default=0.00,name="Edgetrusion", precision=3,unit="LENGTH")
 
 	bpy.app.handlers.scene_update_post.append(ZClipUpdate)
 
@@ -100,6 +116,8 @@ def unregister():
 	del bpy.types.Object.zclip_newz
 	del bpy.types.Object.zclip_oldz
 	del bpy.types.Object.zclip_buf
+	
+	del bpy.types.Object.edgetrusion
 	
 	bpy.app.handlers.scene_update_post.remove(ZClipUpdate)
 
