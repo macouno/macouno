@@ -5,9 +5,12 @@ from bpy.props import EnumProperty, FloatProperty
 @persistent
 def ZClipUpdate(context):
 
-	ob = bpy.context.active_object
-	
-	if not ob.zclip_enabled:
+	try:
+		ob = bpy.context.active_object
+		
+		if not ob.zclip_enabled:
+			return
+	except:
 		return
 
 	from macouno import bmesh_extras
