@@ -58,7 +58,7 @@ def ZClipUpdate(context):
 
 		for i, e in enumerate(bm.edges):
 			if e.select:
-				ob.edgetrusion = e.verts[0][ex]
+				ob.edgetrusion = float(e.verts[0][ex]) / e.calc_length()
 	except:
 		pass
 		
@@ -83,6 +83,7 @@ class ZClipPanel(bpy.types.Panel):
 
 		scn = context.scene
 		ob = context.active_object
+		e = 'extrusion '+str(round(ob.edgetrusion,4))
 		row = layout.row()
 		row.prop(ob,'zclip_enabled')
 		row = layout.row()
@@ -90,7 +91,8 @@ class ZClipPanel(bpy.types.Panel):
 		row = layout.row()
 		row.prop(ob,'zclip_buf')
 		row = layout.row()
-		row.prop(ob,'edgetrusion')
+		layout.label(text=e)
+		#row.prop(ob,'edgetrusion')
 		
 	def update(self,context):
 		print('UPDATE')

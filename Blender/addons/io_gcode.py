@@ -209,43 +209,12 @@ class ExportGCODE(Operator, ExportHelper):
 	filename_ext = ".gcode"
 	filter_glob = StringProperty(default="*.gcode", options={'HIDDEN'})
 
-	ascii = BoolProperty(
-			name="Ascii",
-			description="Save the file in ASCII file format",
-			default=False,
-			)
-	use_mesh_modifiers = BoolProperty(
-			name="Apply Modifiers",
-			description="Apply the modifiers before saving",
-			default=True,
-			)
-
-	axis_forward = EnumProperty(
-			name="Forward",
-			items=(('X', "X Forward", ""),
-				   ('Y', "Y Forward", ""),
-				   ('Z', "Z Forward", ""),
-				   ('-X', "-X Forward", ""),
-				   ('-Y', "-Y Forward", ""),
-				   ('-Z', "-Z Forward", ""),
-				   ),
-			default='Y',
-			)
-	axis_up = EnumProperty(
-			name="Up",
-			items=(('X', "X Up", ""),
-				   ('Y', "Y Up", ""),
-				   ('Z', "Z Up", ""),
-				   ('-X', "-X Up", ""),
-				   ('-Y', "-Y Up", ""),
-				   ('-Z', "-Z Up", ""),
-				   ),
-			default='Z',
-			)
-	global_scale = FloatProperty(
-			name="Scale",
-			min=0.01, max=1000.0,
-			default=1.0,
+	# The extrusion speed for any normal move!!!
+	# This is normally 0.035
+	ExtrusionSpeed = FloatProperty(
+			name="Extrusion speed",
+			min=0.001, max=10.0,
+			default=0.035,
 			)
 
 	def execute(self, context):
