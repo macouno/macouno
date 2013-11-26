@@ -104,7 +104,6 @@ class ImportGCODE(Operator, ImportHelper):
 				e = 0.0
 				aPrev = False
 				t = False
-				extrusions = False
 				
 				
 				for li, line in enumerate(f.readlines()):
@@ -120,6 +119,8 @@ class ImportGCODE(Operator, ImportHelper):
 					
 						if line.startswith('G1 '):
 						
+							# Create a fresh new bmesh and an object for it to go into
+							# We need the object here so we can make vertex groups later on (in bmesh_extras)
 							if bm is False:
 								bm = bmesh.new()
 								me = bpy.data.meshes.new(objName)
@@ -133,6 +134,12 @@ class ImportGCODE(Operator, ImportHelper):
 									ex = bm.verts.layers.float['extrusions']
 								except KeyError:
 									ex = bm.verts.layers.float.new('extrusions')
+								
+								# Don't forget that the string type needs encoded bytes!!! Shees...
+								try:
+									et = bm.edges.layers.string['types']
+								except KeyError:
+									et = bm.edges.layers.string.new('types')
 
 							# Lets get coordinates
 							words = line.split(' ')
@@ -181,9 +188,8 @@ class ImportGCODE(Operator, ImportHelper):
 								
 								# Add an edge if we can!
 								if not preI is False:
-									bm.edges.new([bm.verts[curI], bm.verts[preI]])
-									
-								
+									curE = bm.edges.new([bm.verts[curI], bm.verts[preI]])
+									curE[et] = t.encode('utf-8')
 									
 								# Set the previous vert index to the current index
 								preI = curI
@@ -194,8 +200,6 @@ class ImportGCODE(Operator, ImportHelper):
 			if not bm is False:
 				bm.to_mesh(me)
 				bm.free()
-				
-				ob['extrusions'] = extrusions
 				
 
 		return {'FINISHED'}
@@ -210,12 +214,30 @@ class ExportGCODE(Operator, ExportHelper):
 	filter_glob = StringProperty(default="*.gcode", options={'HIDDEN'})
 
 	# The extrusion speed for any normal move!!!
-	# This is normally 0.035
-	ExtrusionSpeed = FloatProperty(
-			name="Extrusion speed",
+	# This is normally 0.035 * the length of the move
+	# Anchor 0.175
+	ExtrusionFactor = FloatProperty(
+			name="Extrusion factor",
 			min=0.001, max=10.0,
 			default=0.035,
 			)
+			
+		# The methods we use
+	types=(
+		('INF', 'Infill', '1620.000'),
+		('CON', 'Connection', '1620.000'),
+		('MOV', 'Move to start position', '9000.000'),
+		('ANC', 'Anchor', '1800.000'),
+		('RET', 'Retract', '1500.000'),
+		('TRA', 'Travel move', '9000.000'),
+		('RES', 'Restart', '1500.000'),
+		('INS', 'Inset', '1800.000'),
+		('OUT', 'Outline', '720.000'),
+		('END', 'End of print', '1500.000'),
+		)
+	
+	
+	Speed = EnumProperty(items=types, name='Speed', description='The speed of the movement', default='INF')
 
 	def execute(self, context):
 		from mathutils import Matrix
