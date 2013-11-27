@@ -32,7 +32,7 @@ bl_info = {
 	"category": "Import-Export"}
 
 
-import os
+import os, math
 import bpy, bmesh
 from macouno import bmesh_extras
 from bpy.props import (StringProperty,
@@ -194,7 +194,9 @@ class ImportGCODE(Operator, ImportHelper):
 								# Set the previous vert index to the current index
 								preI = curI
 							
-
+					# Do not go beyond the end of the print
+					if t == 'End of print':
+						break
 						
 							
 			if not bm is False:
@@ -212,7 +214,40 @@ class ExportGCODE(Operator, ExportHelper):
 
 	filename_ext = ".gcode"
 	filter_glob = StringProperty(default="*.gcode", options={'HIDDEN'})
+	
+	newlines = []
+	dEdges = []
+	bm = None
+	dvert_lay = None
+	Arot = 0.0
+	slice = {'nr': 0, 'position': 0.0}
+	percentage = 0.0
+	Anchored = False
+	
+	'''
+	Movetypes{
+		'Groupname': {
+			'F': Speed,
+			'A': Extrusion rotation,
+			'Type': Extrusion rotation interpretation (set is set value, len = multiplied by mm of move,
+			'index': the index of the vertex group with the same name as the group,
+			}
+		}
+	'''
+	moveTypes = {
+		'Move to start position':	{'F':9000.0,	'A':0.0, 		'Type':'set',	'index':None},
+		'Anchor':								{'F':1800.0,	'A':0.175, 	'Type':'len',	'index':None},
+		'Restart':								{'F':1500.0,	'A':1.3, 		'Type':'set',	'index':None},
+		'Travel move':					{'F':9000.0,	'A':0.0, 		'Type':'set', 	'index':None},
+		'Connection':						{'F':1620.0,	'A':0.035, 	'Type':'len', 	'index':None},
+		'Retract':								{'F':1500.0,	'A':-1.3, 	'Type':'set', 	'index':None},
+		'Outline':								{'F':720.0,	'A':0.035, 	'Type':'len', 	'index':None},
+		'Inset':									{'F':1800.0,	'A':0.035, 	'Type':'len',	'index':None},
+		'Infill': 									{'F':1620.0,	'A':0.035, 	'Type':'len', 	'index':None},
+		'End of print': 						{'F':1500.0,	'A':-1.3, 	'Type':'set',	'index':None}
+		}
 
+	'''
 	# The extrusion speed for any normal move!!!
 	# This is normally 0.035 * the length of the move
 	# Anchor 0.175
@@ -221,36 +256,168 @@ class ExportGCODE(Operator, ExportHelper):
 			min=0.001, max=10.0,
 			default=0.035,
 			)
+	'''
+	
+	def makeStart(self):
+		self.newlines.append("""M136 (enable build progress)
+M73 P0
+G162 X Y F2000(home XY axes maximum)
+G161 Z F900(home Z axis minimum)
+G92 X0 Y0 Z-5 A0 B0 (set Z to -5)
+G1 Z0.0 F900(move Z to '0')
+G161 Z F100(home Z axis minimum)
+M132 X Y Z A B (Recall stored home offsets for XYZAB axis)
+G92 X152 Y75 Z0 A0 B0
+G1 X-112 Y-73 Z150 F3300.0 (move to waiting position)
+G130 X20 Y20 A20 B20 (Lower stepper Vrefs while heating)
+M135 T0
+M104 S230 T0
+M133 T0
+G130 X127 Y127 A127 B127 (Set Stepper motor Vref to defaults)
+; Slice 0
+; Position  0
+; Thickness 0.2
+; Width 0.4
+M73 P0; """)
+		return
+		
+		
+		
+	def makeEnd(self):	
+		self.newlines.append("""M18 A B(Turn off A and B Steppers)
+G1 Z155 F900
+G162 X Y F2000
+M18 X Y Z(Turn off steppers after a build)
+M104 S0 T0
+M70 P5 (We <3 Making Things!)
+M72 P1  ( Play Ta-Da song )
+M73 P100 (end  build progress )
+M137 (build end notification)""")
+		return
+
+		
+		
+	# Find the vertex group for this vertex
+	def findGroup(self,v):
+		for key in self.moveTypes:
+			move = self.moveTypes[key]
+			groupIndex = move['index']
+			if not groupIndex is None:
+				try:
+					x = v[self.dvert_lay][groupIndex]
+					return move, key
+				except:
+					pass
+		return None
+		
+		
+		
+	# Make a line of gcode for this vertex
+	def makeLine(self, v, e):
+		
+		line = 'G1'
+		
+		# Add a nice percentage counter for display on the makerbot
+		prcnt =  math.floor((len(self.dEdges) / len(self.bm.edges) )* 100)
+		if prcnt > self.percentage:
+			self.percentage = prcnt
+			line = 'M73 P'+str(prcnt)+';\n'+line
+		
+		
+		x = round(v.co[0],3)
+		y = round(v.co[1],3)
+		z = round(v.co[2],3)
+		line = line+' X'+str(x)
+		line = line+' Y'+str(y)
+		line = line+' Z'+str(z)
+		
+		
+		# Check for the next slice
+		if z > self.slice['position']:
+			self.slice['nr'] += 1
+			self.slice['position'] = z
+			line = '; Slice '+str(self.slice['nr'])+'\n; Position '+str(z)+'\n; Thickness 0.2\n; Width 0.4\n'+line
+		
+		
+		# Get the specific values for this type of movement!
+		move, moveName = self.findGroup(v)
+		if not move is None:
+			line = line+' F'+str(round(move['F'],3))
 			
-		# The methods we use
-	types=(
-		('INF', 'Infill', '1620.000'),
-		('CON', 'Connection', '1620.000'),
-		('MOV', 'Move to start position', '9000.000'),
-		('ANC', 'Anchor', '1800.000'),
-		('RET', 'Retract', '1500.000'),
-		('TRA', 'Travel move', '9000.000'),
-		('RES', 'Restart', '1500.000'),
-		('INS', 'Inset', '1800.000'),
-		('OUT', 'Outline', '720.000'),
-		('END', 'End of print', '1500.000'),
-		)
+			# THe first anchor only gets a value of 5.0!! Yeah
+			if moveName == 'Anchor' and not self.Anchored:
+				self.Arot += 5.0
+				self.Anchored = True
+			elif move['Type'] == 'set':
+				self.Arot += move['A']
+			else:
+				self.Arot += move['A'] * e.calc_length()
+			line = line+' A'+str(round(self.Arot,3))
+			line = line +'; '+moveName
+		line = line + '\n'
+		return line
 	
 	
-	Speed = EnumProperty(items=types, name='Speed', description='The speed of the movement', default='INF')
-
+	
+	# Step through the code to be printed!
+	def step(self, vert):
+	
+		for e in vert.link_edges:
+			if not e.index in self.dEdges:
+				for v in e.verts:
+					if not v is vert:
+						self.dEdges.append(e.index)
+						self.newlines.append(self.makeLine(v,e))
+						self.step(v)
+						
+		return
+	
+	
 	def execute(self, context):
-		from mathutils import Matrix
-
-		global_matrix = axis_conversion(to_forward=self.axis_forward,
-										to_up=self.axis_up,
-										).to_4x4() * Matrix.Scale(self.global_scale, 4)
-
-		faces = itertools.chain.from_iterable(
-			blender_utils.faces_from_mesh(ob, global_matrix, self.use_mesh_modifiers)
-			for ob in context.selected_objects)
-
-		stl_utils.write_stl(self.filepath, faces, self.ascii)
+		
+		self.makeStart()
+		
+		# Let's go make some lines with gcode!
+		self.bm = bmesh_extras.get_bmesh()
+		
+		self.dvert_lay = self.bm.verts.layers.deform.active
+		if self.dvert_lay is None:
+			print('Cancelling export... no use to try without vertex groups')
+			return
+			
+		# Here we get all the group indexes and add them to the dict!
+		for key in self.moveTypes:
+			try:
+				group = bpy.context.active_object.vertex_groups[key]
+				self.moveTypes[key]['index'] = group.index
+			except:
+				pass
+		# Lets find the vert at the start of the print!
+		#group = bpy.context.active_object.vertex_groups['Move to start position']
+		start_index = self.moveTypes['Move to start position']['index']
+			
+		startV = None
+		for v in self.bm.verts:
+			try:
+				x = v[self.dvert_lay][start_index]
+				startV = v
+			except:
+				pass
+			
+		if startV:
+			self.newlines.append(self.makeLine(startV,None))
+			self.step(startV)
+		else:
+			print('Unable to retrieve start position')
+		
+		self.bm.free()
+		self.makeEnd()
+		
+		fOut = self.filepath
+		with open(fOut, 'w') as f:
+			for line in self.newlines:
+				f.write(line)
+		
 
 		return {'FINISHED'}
 

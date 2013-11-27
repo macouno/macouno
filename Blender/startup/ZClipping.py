@@ -89,7 +89,6 @@ class ZClipPanel(bpy.types.Panel):
 		ob = context.active_object
 		et = ob.edgetype
 		if not et == 'None':
-			print('NONE?',et)
 			et = 'edgetype: '+et
 			ex = 'extrusion: '+str(round(ob.edgetrusion,4))
 		else:
