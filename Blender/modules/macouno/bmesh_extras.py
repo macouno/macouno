@@ -121,7 +121,70 @@ def create_from_lists(bm=None,verts=None,edges=None,faces=None):
 	me= bpy.data.meshes['Cube']
 	bm.to_mesh(me)
 	bm.free()
+	
+	
+def get_matrix(bme=None, faces=None):
+	
+	if not bme:
+		bm = get_bmesh()
+	else:
+		bm = bme
 		
+	# Get the selected faces if none were provided
+	if not faces:
+		faces = get_selected_faces(bm)
+		
+	# If no faces have been found, just use all!
+	pLen = len(faces)
+	if not pLen:
+		faces = bm.faces
+		pLen = len(faces)
+		
+	# There really should be some faces now
+	if not pLen:
+		print('ERROR NO FACES FOUND')
+	
+	# Since we have faces... we can continue
+	else:
+		
+		centre = get_center(faces)
+		zVec = get_normal(faces)
+		
+		yVec = mathutils.Vector()
+		
+		vCount = 0
+		
+		for f in faces:
+		
+			for v in f.verts:
+				
+				vCount += 1
+				
+				print(v.co, centre)
+				
+				relCo = v.co - centre
+				
+				#yVec += zVec.project(relCo)
+				
+				rVec = relCo - zVec * zVec.dot(relCo)
+				
+				yVec += rVec
+				print(zVec, yVec, rVec)
+				
+				print(math.degrees(zVec.angle(yVec)))
+				
+		yVec = yVec.normalized()
+				
+		xVec =yVec.cross(zVec)
+			
+		mat = mathutils.Matrix((xVec, yVec, zVec)).transposed()
+		
+		
+	if not bme:
+		put_bmesh(bm)
+		return None, mat
+	else:
+		return bm. mat
 	
 	
 # Crease all edges sharper than 60 degrees (1 radians-ish)

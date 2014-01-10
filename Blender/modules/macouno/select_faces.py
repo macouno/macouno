@@ -12,7 +12,7 @@ def all(invert=False):
 
 # Select all faces (or deselect)
 def none():
-	for f in bpy.context.active_object.data.faces:
+	for p in bpy.context.active_object.data.polygons:
 		f.select = False
 	return
 

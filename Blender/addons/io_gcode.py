@@ -170,9 +170,6 @@ class ImportGCODE(Operator, ImportHelper):
 											e = 0.0
 										aPrev = aCur
 											
-										if li < 100:
-											print(e,aCur,aPrev)
-											
 
 									
 							#	Only add a point for actual defined positions
@@ -278,7 +275,8 @@ G130 X127 Y127 A127 B127 (Set Stepper motor Vref to defaults)
 ; Position  0
 ; Thickness 0.2
 ; Width 0.4
-M73 P0; """)
+M73 P0;
+""")
 		return
 		
 		
@@ -292,7 +290,8 @@ M104 S0 T0
 M70 P5 (We <3 Making Things!)
 M72 P1  ( Play Ta-Da song )
 M73 P100 (end  build progress )
-M137 (build end notification)""")
+M137 (build end notification)
+""")
 		return
 
 		
@@ -331,16 +330,20 @@ M137 (build end notification)""")
 		line = line+' Y'+str(y)
 		line = line+' Z'+str(z)
 		
-		
-		# Check for the next slice
-		if z > self.slice['position']:
-			self.slice['nr'] += 1
-			self.slice['position'] = z
-			line = '; Slice '+str(self.slice['nr'])+'\n; Position '+str(z)+'\n; Thickness 0.2\n; Width 0.4\n'+line
-		
-		
 		# Get the specific values for this type of movement!
 		move, moveName = self.findGroup(v)
+		
+		# Check for the next slice
+		if z > self.slice['position'] or moveName == 'End of print':
+			self.slice['nr'] += 1
+			self.slice['position'] += 0.2
+			sliceLine = '; Slice '+str(self.slice['nr'])+'\n; Position '+str(round(self.slice['position'],2))+'\n; Thickness 0.2\n; Width 0.4\n'
+			if moveName == 'End of print':
+				self.slice['nr'] += 1
+				self.slice['position'] += 0.2
+				sliceLine = sliceLine + '; Slice '+str(self.slice['nr'])+'\n; Position '+str(round(self.slice['position'],2))+'\n; Thickness 0.2\n; Width 0.4\n'
+			line = sliceLine + line
+
 		if not move is None:
 			line = line+' F'+str(round(move['F'],3))
 			
@@ -374,6 +377,15 @@ M137 (build end notification)""")
 	
 	
 	def execute(self, context):
+	
+		self.newlines = []
+		self.dEdges = []
+		self.bm = None
+		self.dvert_lay = None
+		self.Arot = 0.0
+		self.slice = {'nr': 0, 'position': 0.0}
+		self.percentage = 0.0
+		self.Anchored = False
 		
 		self.makeStart()
 		
