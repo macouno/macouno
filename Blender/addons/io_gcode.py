@@ -220,6 +220,12 @@ class ExportGCODE(Operator, ExportHelper):
 	slice = {'nr': 0, 'position': 0.0}
 	percentage = 0.0
 	Anchored = False
+	xyz = ''
+	x= 0.0
+	y = 0.0
+	z = 0.0
+	move = ''
+	moveName = ''
 	
 	'''
 	Movetypes{
@@ -307,14 +313,16 @@ M137 (build end notification)
 					return move, key
 				except:
 					pass
+					
+		print('Found a vert without a group!')
 		return None
 		
 		
 		
 	# Make a line of gcode for this vertex
 	def makeLine(self, v, e):
-		
-		line = 'G1'
+	
+		line = ''
 		
 		# Add a nice percentage counter for display on the makerbot
 		prcnt =  math.floor((len(self.dEdges) / len(self.bm.edges) )* 100)
@@ -322,41 +330,64 @@ M137 (build end notification)
 			self.percentage = prcnt
 			line = 'M73 P'+str(prcnt)+';\n'+line
 		
-		
-		x = round(v.co[0],3)
-		y = round(v.co[1],3)
-		z = round(v.co[2],3)
-		line = line+' X'+str(x)
-		line = line+' Y'+str(y)
-		line = line+' Z'+str(z)
+		# IF the PREVIOUS line was a travel move we want to add a restart here!
+		if self.moveName == 'Travel move':
+			Restart = self.moveTypes['Restart']
+			self.Arot += Restart['A']
+			line = line + 'G1' + self.xyz+' F'+str(round(Restart['F'],3))+' A'+str(round(self.Arot,3))+'; Restart\n'
+			
+		# After the move to start position we always insert an anchor blob!
+		elif self.moveName == 'Move to start position':
+			self.Arot += 5.0
+			line = line + 'G1' + self.xyz+' F120.000 A5.000; Anchor\n'
 		
 		# Get the specific values for this type of movement!
-		move, moveName = self.findGroup(v)
+		self.move, self.moveName = self.findGroup(v)
+		
+		# IF THIS is a travel move we want to add a retraction on the line before!
+		if self.moveName == 'Travel move':
+			# Make a line with the previous xyz!
+			Retract = self.moveTypes['Retract']
+			self.Arot += Retract['A']
+			line = line + 'G1' + self.xyz+' F'+str(round(Retract['F'],3))+' A'+str(round(self.Arot,3))+'; Retract\n'
+		
+		# Put all this in self because we want to make sure we keep it for the next move (in case it's a travel move!)
+		self.xyz = ''
+		self.x = round(v.co[0],3)
+		self.y = round(v.co[1],3)
+		self.z = round(v.co[2],3)
+		self.xyz = self.xyz+' X'+str(self.x)
+		self.xyz = self.xyz+' Y'+str(self.y)
+		self.xyz = self.xyz+' Z'+str(self.z)
+		line = line+'G1'+ self.xyz
 		
 		# Check for the next slice
-		if z > self.slice['position'] or moveName == 'End of print':
+		if self.z > self.slice['position'] or self.moveName == 'End of print':
 			self.slice['nr'] += 1
 			self.slice['position'] += 0.2
 			sliceLine = '; Slice '+str(self.slice['nr'])+'\n; Position '+str(round(self.slice['position'],2))+'\n; Thickness 0.2\n; Width 0.4\n'
-			if moveName == 'End of print':
+			if self.moveName == 'End of print':
 				self.slice['nr'] += 1
 				self.slice['position'] += 0.2
 				sliceLine = sliceLine + '; Slice '+str(self.slice['nr'])+'\n; Position '+str(round(self.slice['position'],2))+'\n; Thickness 0.2\n; Width 0.4\n'
 			line = sliceLine + line
+			
+			
 
-		if not move is None:
-			line = line+' F'+str(round(move['F'],3))
+		if not self.move is None:
+		
+			line = line+' F'+str(round(self.move['F'],3))
 			
 			# THe first anchor only gets a value of 5.0!! Yeah
-			if moveName == 'Anchor' and not self.Anchored:
+			if self.moveName == 'Anchor' and not self.Anchored:
 				self.Arot += 5.0
 				self.Anchored = True
-			elif move['Type'] == 'set':
-				self.Arot += move['A']
+			elif self.move['Type'] == 'set':
+				self.Arot += self.move['A']
 			else:
-				self.Arot += move['A'] * e.calc_length()
+				self.Arot += self.move['A'] * e.calc_length()
 			line = line+' A'+str(round(self.Arot,3))
-			line = line +'; '+moveName
+			line = line +'; '+self.moveName
 		line = line + '\n'
 		return line
 	
