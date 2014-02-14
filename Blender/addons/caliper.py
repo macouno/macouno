@@ -594,7 +594,7 @@ class SCENE_PT_caliper(bpy.types.Panel):
 			box.prop_search(obj, 'CaliperEndTarget', context.scene, 'objects')
 			
 			try:
-				target = bpy.data.objects[obj.CaliperStartTarget]
+				target = bpy.data.objects[obj.CaliperEndTarget]
 				if target.type == 'MESH':
 					box.prop_search(obj, 'CaliperEndSubtarget',	target, 'vertex_groups')
 			except:
