@@ -1,5 +1,5 @@
 import bpy
-from bpy.props import EnumProperty, IntProperty
+from bpy.props import EnumProperty, IntProperty, BoolProperty
 
 
 class PaletteOperator(bpy.types.Operator):
@@ -7,11 +7,15 @@ class PaletteOperator(bpy.types.Operator):
 	bl_label = "Get palettes"
 	bl_options = {'REGISTER', 'UNDO'}
 	
+	entoform = BoolProperty(name='Entoform', description='Acquire a single colour from the Entoforms.com database', default=True)
+	
+	seed = IntProperty(name='Seed', default=1, min=0, max=1000000, soft_min=0, soft_max=1000000)	
+	
 	days = IntProperty(name='Days', default=1, min=0, max=365, soft_min=0, soft_max=365)
 	
 	# The methods we use
 	types=(
-		('NEW', 'newest', ''),
+		('NEW', 'recent', ''),
 		('RAT', 'rating', ''),
 		('POP', 'popular', ''),
 		)
@@ -23,8 +27,11 @@ class PaletteOperator(bpy.types.Operator):
 		return True
 
 	def execute(self, context):
-		from macouno import colour
-		colour.get_palettes(self.days, self.type)
+		from macouno import color
+		if self.entoform:
+			color.get_entoform_palette(self.seed)
+		else:
+			color.get_palettes(self.days, self.type)
 		return {'FINISHED'}
 
 

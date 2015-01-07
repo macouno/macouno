@@ -717,7 +717,7 @@ def cast_loop(bme=None, corners=0, falloff_scale=1.0, falloff_shape='STR',corner
 		for v in selVerts:
 			if not v in outVerts:
 				inVerts.append(v)
-		
+				
 		# make a quaternion and a matrix representing this "plane"
 		quat = normal.to_track_quat('-Z', 'Y')
 		mat = quat.to_matrix()
@@ -735,6 +735,7 @@ def cast_loop(bme=None, corners=0, falloff_scale=1.0, falloff_shape='STR',corner
 			if v in outVerts:
 				midDist += relPos.length
 		
+		
 		# The medium distance from the center point
 		midDist /= len(outVerts) 
 		
@@ -750,15 +751,18 @@ def cast_loop(bme=None, corners=0, falloff_scale=1.0, falloff_shape='STR',corner
 			if top is False or v.co[2] > top:
 				top = v.co[2]
 				topVert = i
+
 		
 		# As a final step... we want them to be rotated neatly around the center...
 		step = math.radians(360) / (len(outEdges)+1)
 		
+
 		# Now that we found the top vert we can start looping through to put them in the right position
 		loopVerts = [outVerts[topVert]]
 		outEdges, loopVerts = loop_step(outVerts[topVert],loopVerts,step,outEdges,cent,False)
 		
 
+		
 		# Set corner group weight to 0.0 because the shape is a circle (will be reset to 1.0 later for the actual corners)
 		if not corner_group is None:
 			bm, group_index = add_to_group(bme=bm,verts=outVerts, newGroup=False, groupName=corner_group, weight=0.0)

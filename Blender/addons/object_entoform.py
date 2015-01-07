@@ -177,6 +177,8 @@ class Entoform():
 				
 				#print('sel-',len(mesh_extras.get_selected_polygons()),group.name)
 				
+
+				
 				mesh_extras.smooth_selection()
 
 				# No need to continue if we have no selected polygons
@@ -204,10 +206,19 @@ class Entoform():
 					
 					print(pad,'step ',stepText,action['name'], string['number'])
 
+					
+					if string['number'] == 1:
+						print(action['loop_corners'], action['loop_scale'],action['loop_shape'])
+						return
+						
 					# Cast the selection to the correct shape please
 					bmesh_extras.cast_loop(corners=action['loop_corners'], falloff_scale=action['loop_scale'], falloff_shape=action['loop_shape'],corner_group='corner')
 					
 					bpy.ops.object.mode_set(mode='EDIT')
+					
+					if string['number'] == 1:
+						print(string['action'])
+						return
 					
 					if action['type'] == 'bump':
 					
@@ -251,7 +262,7 @@ class Entoform():
 					self.dnaStep += 1
 					
 					# Redraw hack to see what is happening
-					#bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
+					bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
 					
 					# If there's a sub string and we're allowed deeper... lets do that
 					if len(string['strings']):
@@ -505,31 +516,6 @@ class Entoform():
 		
 		return action
 		
-		
-	'''
-	# Set the intensity for a vector
-	def applyIntensity(self, vector, intensity, mode):
-	
-		if mode == 'float':
-			return vector * intensity
-	
-		if mode == 'int':
-			return math.ceil(vector * intensity)
-		
-		vector = mathutils.Vector((vector[0], vector[1], vector[2]))
-		
-		if mode == 'inc':
-			vector *= intensity
-		else:
-			for i, v in enumerate(vector):
-				if v > 1.0:
-					vector[i] = ((v-1.0) * intensity) + 1.0
-				elif v < 1.0:
-					vector[i] = 1.0 - ((1.0 - v) * intensity)
-		
-		return vector
-	'''
-				
 	
 	
 	# Make a section type for the dna string	
@@ -1026,11 +1012,11 @@ class Entoform():
 		self.options['bool'] = {'a': True,'b': False}
 		
 		self.options['primary'] = {
-			'translate': {'min': 2.0, 'max': 5.0},
+			'translate': {'min': 2.0, 'max': 7.0},
 			'scale': {'min': 0.4, 'max': 0.7},
 			'crease': {'min': 0.4, 'max': 0.7},
 			'bumpscale': {'min': 0.4, 'max': 0.7},
-			'loopscale': {'min': 0.5, 'max': 1.1},
+			'loopscale': {'min': 0.7, 'max': 1.2},
 			'rotation': {'min': math.radians(-60.0), 'max': math.radians(60.0)},
 			'divergence': {'min': math.radians(45),'max': math.radians(75)},
 			'limit': {'min': 3, 'max': 6},
@@ -1289,8 +1275,8 @@ class Entoform_init(bpy.types.Operator):
 	bl_label = 'Entoform'
 	bl_options = {'REGISTER', 'UNDO'}
 	
-	d='Selina'
-	limit = 1
+	d='Greg Robinson'
+	limit = 2
 
 	dnaString = StringProperty(name="DNA", description="DNA string to define your shape", default=d, maxlen=100)
 	

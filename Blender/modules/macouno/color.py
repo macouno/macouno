@@ -21,8 +21,18 @@ def rgb_to_hex(rgb):
             rgb[i] = int(c*255)
     rgb = tuple(rgb)
     return '%02x%02x%02x' % rgb
+	
+def hex_to_rgb(value):
+	value = value.lstrip('#')
+	lv = len(value)
+	return tuple(int(value[i:int(i+lv/3)], 16) for i in range(0, lv, int(lv/3)))
 
-
+def twofivefive_to_float(rgb):
+	newCol = []
+	for i, col in enumerate(rgb):
+		newCol.append(round((col / 255.0),5))
+	rgb = tuple(newCol)
+	return rgb
 
 # Set the base color for the entire mesh at the start
 def setBaseColor(baseColor):
@@ -121,21 +131,73 @@ def setColors(r,g,b,g1,g2,g3,g4):
 	return colors
 	
 	
-# GET KULER PALETTES
+	
+# Get a single palette for the entoforms!
+def get_entoform_palette(seed=''):
+
+	import urllib.request
+	from xml.dom import minidom, Node
+	url = 'http://entoforms.com/scripts/palettes.php?acquire=xml&seed='+str(seed)
+	
+	url_info = urllib.request.urlopen(url)
+	
+	print(url_info)
+	
+	xmldoc = minidom.parse(url_info)
+
+	rootNode = xmldoc.documentElement
+	
+	palettes = {}
+	letter = 97
+	
+	for palette in xmldoc.getElementsByTagName('palette'):
+		
+		item = {}
+		
+		item['id'] = palette.getElementsByTagName('id')[0].firstChild.nodeValue
+		item['title'] = palette.getElementsByTagName('name')[0].firstChild.nodeValue
+		item['author'] = palette.getElementsByTagName('creator')[0].firstChild.nodeValue
+		
+		print('acquired palette',item)
+		
+		##swatches = palette.getElementsByTagName('colours')
+		for swatches in xmldoc.getElementsByTagName('palette'):
+			item['hexes'] = []
+			item['hexes'].append(swatches.getElementsByTagName('colour_1')[0].firstChild.nodeValue)
+			item['hexes'].append(swatches.getElementsByTagName('colour_2')[0].firstChild.nodeValue)
+			item['hexes'].append(swatches.getElementsByTagName('colour_3')[0].firstChild.nodeValue)
+			item['hexes'].append(swatches.getElementsByTagName('colour_4')[0].firstChild.nodeValue)
+			item['hexes'].append(swatches.getElementsByTagName('colour_5')[0].firstChild.nodeValue)
+		
+		item['swatches'] = []
+		for h in item['hexes']:
+			item['swatches'].append(twofivefive_to_float(hex_to_rgb(h)))
+		
+		palettes[chr(letter)] = item
+		
+	if len(palettes):
+		bpy.context.scene['palettes'] = palettes
+	
+	
+	
+# GET KULER PALETTES FROM THE KULER WEBSITE
 def get_palettes(days=1, type='NEW'):
 
 	import urllib.request
 	from xml.dom import minidom, Node
 	
 	if type == 'NEW':
-		listType = 'newest'
+		listType = 'recent'
 	elif type == 'RAT':
 		listType = 'rating'
 	else:
 		listType = 'popular'
 	
 	# listType can be newest, rating, popular, timespan=0 = all
-	url_info = urllib.request.urlopen('http://kuler-api.adobe.com//feeds/rss/get.cfm?timeSpan='+str(days)+'&listType='+listType)
+	#https://kuler-api.adobe.com/rss/get.cfm?listtype=popular&timespan=30&key=Wh47EV3R7HEK3YI5
+	url = 'https://kuler-api.adobe.com/rss/get.cfm?listtype='+listType+'&timespan='+str(days)+'&key=Wh47EV3R7HEK3YI5'
+	print('Aquire',url)
+	url_info = urllib.request.urlopen(url)
 		
 	print(url_info)
 		
@@ -188,6 +250,8 @@ def get_palettes(days=1, type='NEW'):
 						
 				palettes[chr(letter)] = item
 				letter += 1
+				
+				print(item);
 			
 	if len(palettes):
 		bpy.context.scene['palettes'] = palettes
