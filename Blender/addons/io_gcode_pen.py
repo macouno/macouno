@@ -32,7 +32,7 @@ bl_info = {
 	"category": "Import-Export"}
 
 
-import os, math
+import os, math, sys
 import bpy, bmesh
 from macouno import bmesh_extras
 from bpy.props import (StringProperty,
@@ -62,6 +62,7 @@ class ExportGCODEPEN(Operator, ExportHelper):
 	filter_glob = StringProperty(default="*.gcode", options={'HIDDEN'})
 	
 	newlines = []
+	newText = ''
 	dEdges = []
 	bm = None
 	dvert_lay = None
@@ -75,37 +76,42 @@ class ExportGCODEPEN(Operator, ExportHelper):
 	z = 0.0
 	move = ''
 	moveName = ''
-	moveSpeed = 9000.0
+	moveSpeed = 4500.0
+	lineCount = 0
+	file = None
+	depth = 0
+	vList = []
 	
 
 	## Make the start tot the gcode
 	def makeStart(self):
-		self.newlines.append("""M136 (enable build progress)
+		self.file.write("""M136 (enable build progress)
 M73 P0
 G162 X Y F2000(home XY axes maximum)
 G161 Z F900(home Z axis minimum)
-G92 X0 Y0 Z-5 (set Z to -5)
+G92 X0 Y0 Z-5 A0 B0 (set Z to -5)
 G1 Z0.0 F900(move Z to '0')
 G161 Z F100(home Z axis minimum)
-M132 X Y Z (Recall stored home offsets for XYZ axis)
-G92 X152 Y75 Z0
+M132 X Y Z A B (Recall stored home offsets for XYZAB axis)
+G92 X152 Y75 Z0 A0 B0
 G1 X-112 Y-73 Z150 F3300.0 (move to waiting position)
-G130 X20 Y20(Lower stepper Vrefs while heating)
+G130 X20 Y20 A20 B20 (Lower stepper Vrefs while heating)
 M135 T0
+M104 S0 T0
 M133 T0
-G130 X127 Y127(Set Stepper motor Vref to defaults)
+G130 X127 Y127 A127 B127 (Set Stepper motor Vref to defaults)
 ; Slice 0
 ; Position  0
 ; Thickness 0.2
 ; Width 0.4
-M73 P0;
+M73 P0; 
 """)
 		return
 		
 		
 	# Make the end of the gcode
 	def makeEnd(self):	
-		self.newlines.append("""G1 Z155 F900
+		self.file.write("""G1 Z155 F900
 G162 X Y F2000
 M18 X Y Z(Turn off steppers after a build)
 M70 P5 (We <3 Making Things!)
@@ -126,7 +132,7 @@ M137 (build end notification)
 			if not groupIndex is None:
 					try:
 						x = v[self.dvert_lay][groupIndex]
-						return g.name, g.name
+						return g.name
 					except:
 						pass
 					
@@ -136,22 +142,25 @@ M137 (build end notification)
 		
 		
 	# Make a line of gcode for this vertex
-	def makeLine(self, v, e):
-	
+	def makeLine(self, v):
+		print('a')
 		line = ''
+		self.lineCount += 1
+		
 		
 		# Add a nice percentage counter for display on the makerbot
 		prcnt =  math.floor((len(self.dEdges) / len(self.bm.edges) )* 100)
 		if prcnt > self.percentage:
 			self.percentage = prcnt
-			line = 'M73 P'+str(prcnt)+';\n'+line
-			
-		# Make the line!
-		line = line + 'G1' + self.xyz+' F'+str(self.moveSpeed)+'; '+self.moveName+'\n'
-			
+			self.file.write('M73 P'+str(prcnt)+';\n')
+			print(str(prcnt)+'done');
 		
+		print('b')
+			
 		# Get the specific values for this type of movement!
-		self.move, self.moveName = self.findGroup(v)
+		self.moveName = self.findGroup(v)
+		if not self.moveName:
+			self.moveName = 'Outline'
 		
 		# Put all this in self because we want to make sure we keep it for the next move (in case it's a travel move!)
 		self.xyz = ''
@@ -162,30 +171,82 @@ M137 (build end notification)
 		self.xyz = self.xyz+' Y'+str(self.y)
 		self.xyz = self.xyz+' Z'+str(self.z)
 		
+		# Make the line!
+		self.file.write('G1' + self.xyz+' F'+str(self.moveSpeed)+'; '+self.moveName+'\n')
+
+		
 		# Check for the end of the print and add two fresh slices as a buffer!
-		if self.moveName == 'End':
+		if self.moveName == 'End of print':
 			self.slice['nr'] += 1
 			self.slice['position'] += 0.2
-			sliceLine = '; Slice '+str(self.slice['nr'])+'\n; Position '+str(round(self.slice['position'],2))+'\n; Thickness 0.2\n; Width 0.4\n'
+			self.file.write('; Slice '+str(self.slice['nr'])+'\n; Position '+str(round(self.slice['position'],2))+'\n; Thickness 0.2\n; Width 0.4\n')
 			self.slice['nr'] += 1
 			self.slice['position'] += 0.2
-			sliceLine = sliceLine + '; Slice '+str(self.slice['nr'])+'\n; Position '+str(round(self.slice['position'],2))+'\n; Thickness 0.2\n; Width 0.4\n'
-			line = sliceLine + line
-			
-		return line
+			self.file.write('; Slice '+str(self.slice['nr'])+'\n; Position '+str(round(self.slice['position'],2))+'\n; Thickness 0.2\n; Width 0.4\n')
+
+		return
 	
+	
+	# Make a list of all verts to do
+	def makeVertList(self,vert):
+	
+		self.vertList = [vert]
+		
+		while vert:
+			newV = False
+			foundE = False
+			
+			# Find out if the edge has been done
+			if not vert.link_edges[0].index in self.dEdges:
+				foundE = vert.link_edges[0]
+			else:
+				try:
+					if not vert.link_edges[1].index in self.dEdges:
+						foundE = vert.link_edges[1]
+				except:
+					pass
+			
+			if foundE:
+				for v in foundE.verts:
+					if not v is vert:
+						newV = True
+						self.dEdges.append(foundE.index)
+						self.vertList.append(v)
+						vert = v
+						break
+						
+			if not newV:
+				vert = False
+				
+		return
+			
+			
+				
+				
+		
 	
 	
 	# Step through the code to be printed!
 	def step(self, vert):
-	
+		
+		self.depth += 1
+		print(0, self.depth)
 		for e in vert.link_edges:
 			if not e.index in self.dEdges:
 				for v in e.verts:
 					if not v is vert:
+						print(1,e.index)
 						self.dEdges.append(e.index)
-						self.newlines.append(self.makeLine(v,e))
+						print('x',v)
+						print(2,e.index)
+						print(v.index)
+						print('xxx')
+						self.file.write('a\n')
+						self.makeLine(v,e)
+						print(3)
 						self.step(v)
+						print(4)
+						return
 						
 		return
 	
@@ -193,13 +254,18 @@ M137 (build end notification)
 	# Execute the code
 	def execute(self, context):
 	
+		sys.setrecursionlimit(20000)
 		self.newlines = []
+		self.newText = ''
 		self.dEdges = []
 		self.bm = None
 		self.dvert_lay = None
 		self.slice = {'nr': 0, 'position': 0.0}
 		self.percentage = 0.0
 		self.Anchored = False
+		
+		fOut = self.filepath
+		self.file = open(fOut, 'w')
 		
 		self.makeStart()
 		
@@ -214,7 +280,7 @@ M137 (build end notification)
 			
 		# Here we get all the group indexes and add them to the dict!
 		try:
-			group = bpy.context.active_object.vertex_groups['Start']
+			group = bpy.context.active_object.vertex_groups['Move to start position']
 			start_index = group.index
 		except:
 			print('Can not find start group... cancelling')
@@ -230,19 +296,26 @@ M137 (build end notification)
 				pass
 			
 		if startV:
-			self.newlines.append(self.makeLine(startV,None))
+			#self.makeLine(startV,None)
+			self.makeVertList(startV)
+			print('made Vertlist',len(self.vertList))
+			for v in self.vertList:
+				self.makeLine(v)
+			#self.newlines.append(self.makeLine(startV,None))
 			self.step(startV)
+			
 		else:
 			print('Unable to retrieve start position')
 		
 		self.bm.free()
 		self.makeEnd()
 		
+		'''
 		fOut = self.filepath
 		with open(fOut, 'w') as f:
-			for line in self.newlines:
+			for line in self.newText:
 				f.write(line)
-		
+		'''
 
 		return {'FINISHED'}
 

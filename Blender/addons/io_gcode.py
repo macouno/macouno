@@ -47,6 +47,9 @@ from bpy_extras.io_utils import (ImportHelper,
 								 )
 from bpy.types import Operator, OperatorFileListElement
 
+import sys
+sys.setrecursionlimit(10000)
+
 # Get the float from a line segment of gcode
 def gVal(input):
 	input = input.replace(';','')
@@ -214,6 +217,7 @@ class ExportGCODE(Operator, ExportHelper):
 	
 	newlines = []
 	dEdges = []
+	dVerts = []
 	bm = None
 	dvert_lay = None
 	Arot = 0.0
@@ -274,7 +278,7 @@ G92 X152 Y75 Z0 A0 B0
 G1 X-112 Y-73 Z150 F3300.0 (move to waiting position)
 G130 X20 Y20 A20 B20 (Lower stepper Vrefs while heating)
 M135 T0
-M104 S230 T0
+M104 S210 T0
 M133 T0
 G130 X127 Y127 A127 B127 (Set Stepper motor Vref to defaults)
 ; Slice 0
@@ -387,22 +391,22 @@ M137 (build end notification)
 			else:
 				self.Arot += self.move['A'] * e.calc_length()
 			line = line+' A'+str(round(self.Arot,3))
-			line = line +'; '+self.moveName
+			line = line +'; '+self.moveName+' '+str(v.index)
 		line = line + '\n'
 		return line
 	
 	
 	
 	# Step through the code to be printed!
-	def step(self, vert):
-	
+	def step(self, vert,cnt):
+		print(cnt)
 		for e in vert.link_edges:
 			if not e.index in self.dEdges:
 				for v in e.verts:
 					if not v is vert:
 						self.dEdges.append(e.index)
 						self.newlines.append(self.makeLine(v,e))
-						self.step(v)
+						self.step(v,cnt)
 						
 		return
 	
@@ -411,6 +415,7 @@ M137 (build end notification)
 	
 		self.newlines = []
 		self.dEdges = []
+		self.dVerts = []
 		self.bm = None
 		self.dvert_lay = None
 		self.Arot = 0.0
@@ -448,8 +453,29 @@ M137 (build end notification)
 				pass
 			
 		if startV:
+		
 			self.newlines.append(self.makeLine(startV,None))
-			self.step(startV)
+			
+			found = True
+			curV = startV
+			self.dVerts.append(startV.index)
+			
+			while found:
+				found = False
+				print(self.dVerts)
+				for curE in curV.link_edges:
+					for newV in curE.verts:
+						if not newV.index in self.dVerts:
+							#self.dEdges.append(curE.index)
+							self.dVerts.append(newV.index)
+							self.newlines.append(self.makeLine(newV,curE))
+							curV = newV
+							found = True
+							
+			
+			
+			
+			#self.step(startV,1)
 		else:
 			print('Unable to retrieve start position')
 		

@@ -916,9 +916,20 @@ class Entoform():
 	# Get the palette!
 	def getPalette(self):
 	
+		# Go get a fresh palette
+		try:
+			sd = self.choose('int', 'seed', 'palette seed')
+			bpy.ops.scene.get_palettes(entoform=True, seed=sd)
+		except:
+			print('--> UNABLE TO ACQUIRE FRESH PALETTE <--')
+	
 		try:
 			self.options['palettes'] = bpy.context.scene['palettes']
-			palette = self.choose('select', 'palettes', 'palette')
+			if len(self.options['palettes']) > 1:
+				palette = self.choose('select', 'palettes', 'palette')
+			else:
+				palette = self.options['palettes']['a']
+				
 			print(palette['title'])
 
 			self.paletteAuthor = palette['author']
@@ -1010,11 +1021,12 @@ class Entoform():
 		
 		self.options = {}
 		
+		self.options['seed'] = {'min': 0, 'max': 1000000}
 		self.options['basecolor'] = [0.0,0.0,0.0]
 		self.options['bool'] = {'a': True,'b': False}
 		
 		self.options['primary'] = {
-			'translate': {'min': 1.0, 'max': 3.0},
+			'translate': {'min': 2.0, 'max': 5.0},
 			'scale': {'min': 0.4, 'max': 0.7},
 			'crease': {'min': 0.4, 'max': 0.7},
 			'bumpscale': {'min': 0.4, 'max': 0.7},
@@ -1025,7 +1037,7 @@ class Entoform():
 			}
 			
 		self.options['secondary'] = {
-			'translate': {'min': -0.5, 'max': 1.0},
+			'translate': {'min': -1.0, 'max': 2.0},
 			'scale': {'min': -0.3, 'max': 0.3},
 			'crease': {'min': -0.3, 'max': 0.3},
 			'bumpscale': {'min': -0.35, 'max': 0.3},
@@ -1278,7 +1290,7 @@ class Entoform_init(bpy.types.Operator):
 	bl_options = {'REGISTER', 'UNDO'}
 	
 	d='Selina'
-	limit = 0
+	limit = 1
 
 	dnaString = StringProperty(name="DNA", description="DNA string to define your shape", default=d, maxlen=100)
 	
