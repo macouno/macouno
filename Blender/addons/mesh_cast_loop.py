@@ -55,7 +55,15 @@ class Cast_Loop():
 	# Initialise the class
 	def __init__(self, context, shape,scale,scale_falloff, corner_group):
 	
-		bmesh_extras.cast_loop(corners=3, falloff_scale=1.0,falloff_shape='STR',corner_group=None)
+	
+		if shape == 'TRI':
+			corners = 3;
+		elif shape == 'SQA':
+			corners = 4
+		else:
+			corners = 0;
+		
+		bmesh_extras.cast_loop(corners=corners, falloff_scale=scale,falloff_shape=scale_falloff,corner_group=corner_group)
 		return
 
 		

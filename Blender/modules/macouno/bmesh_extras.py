@@ -306,7 +306,7 @@ def get_outer_edges(faces):
 		for e in f1.edges:
 			if not e in outEdges:
 			
-				 # Both the edge's verts should be connected to a non selected face
+				 # Both the edge's verts should be connected to a non selected face (the same!)
 				outFound = False
 				for v in e.verts:
 					if outFound is False:
@@ -653,6 +653,7 @@ def loop_step(v1,loopVerts, step,outEdges, center, dVec):
 	#Check both edges connected to this one
 	for e in v1.link_edges:
 		
+		# We only go for the edge on the outside....
 		if e in outEdges:
 		
 			if v1 == e.verts[0]:
@@ -674,13 +675,14 @@ def loop_step(v1,loopVerts, step,outEdges, center, dVec):
 			#print(len(outEdges),'dot',dot)
 			
 			if dot < 0.0:
-				v2co =  misc.rotate_vector_to_vector(v2co, v1co, -step)
+				v2co =  misc.rotate_vector_to_vector(v1co, v2co, step)
 			else:
 				v2co =  misc.rotate_vector_to_vector(v2co, v1co, step)
 				
 			# Put the vert in the right position
 			v2.co = v2co + center
 			
+			# Remove the edge from the list of outer edges.... no lnoger needed
 			outEdges.remove(e)
 			loopVerts.append(v2)
 			
@@ -761,7 +763,6 @@ def cast_loop(bme=None, corners=0, falloff_scale=1.0, falloff_shape='STR',corner
 		loopVerts = [outVerts[topVert]]
 		outEdges, loopVerts = loop_step(outVerts[topVert],loopVerts,step,outEdges,cent,False)
 		
-
 		
 		# Set corner group weight to 0.0 because the shape is a circle (will be reset to 1.0 later for the actual corners)
 		if not corner_group is None:

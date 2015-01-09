@@ -1,15 +1,6 @@
-import bpy, sys, mathutils
+import bpy, sys, mathutils, math
 from bpy.app.handlers import persistent
 from bpy.props import EnumProperty, IntProperty
-
-
-
-# Make sure the angle between the two vectors is exactly a certain one (v1, v2, angle in radians)
-def rotate_vector_to_vector(vec1, vec2, deg):
-	cross =vec1.cross(vec2)
-	ang = float(vec1.angle(vec2) - deg)
-	mat = mathutils.Matrix.Rotation(-ang, 3, cross)
-	return (vec1 * mat)
 
 	
 
@@ -24,29 +15,64 @@ def CharmUpdate(context):
 	except:
 		return
 		
+	# Some basic settings
+	maxSpeed = 0.5
+	maxRot = math.radians(10.0)
+	maxDist = 15.0
 	
-	maxDist = 10.0
-		
-	# Let's check the position of our Finch... according to some rules
-	
-	loc = ob.location
+	# Retrieve the values for this Finch
+	movement = mathutils.Vector(ob.finch_move)
+	target = mathutils.Vector(ob.finch_target)
+	speed = movement.length
+
 	
 	# See if the Finch is too far from the scene center
-	if loc.length > 10.0:
+	loc = ob.location
+	if loc.length > maxDist:
+		
+		print('setting loc')
+		target = mathutils.Vector(loc)
+		target.negate()
+		target.normalize()
+		
+	# If we need to change where we're going... do so here
+	if target != movement:
 	
-		v = mathutils.Vector(loc)
-		v.negate()
-		v.normalize()
+		ang = movement.angle(target)
 		
-		ob.finch_target = [v[0],v[1],v[2]]
+		if ang < maxRot:
+			movement = target
+			
+		else:
+			
+			targetAngle = ang - maxRot
 		
+			#cross =movement.cross(target)
+			mat = mathutils.Matrix.Rotation(maxRot, 3, 'Z')
+			
+			movement.rotate(mat)
+			ob.rotation_euler.rotate(mat)
 		
+		#cross = movement.cross(target)
+		
+		#ob.rotation_euler.rotate_axis(cross, maxRot)
+		
+	movement.normalize()
+		
+	if movement.length:
+	
+		ob.location += movement
+	
 	# Yaw = rotate around the local Z (side to side)
-	
 	# Pitch = rotate around the local x (nose up)
-	
 	# Roll = rotate around the local y (roll/twist)
-
+	print(1, mathutils.Vector(ob.finch_move))
+	
+	ob.finch_move = [movement[0], movement[1], movement[2]]
+	
+	print(2, mathutils.Vector(ob.finch_move))
+	
+	ob.finch_target = [target[0], target[1], target[2]]
 
 # Add a charm panel to every object
 class Object_finch(bpy.types.Panel):
@@ -66,8 +92,8 @@ class Object_finch(bpy.types.Panel):
 		
 		row = layout.row()
 		row.prop(ob,'finch_target')
-		row.prop(ob,'finch_rotation')
-		row.prop(ob,'finch_thrust')
+		row = layout.row()
+		row.prop(ob,'finch_move')
 
 
 	
@@ -77,13 +103,10 @@ def register():
 	bpy.types.Object.finch_enabled = bpy.props.BoolProperty(default=False,name="Finch")
 	
 	# The target speed & direction
-	bpy.types.Object.finch_target = bpy.props.FloatVectorProperty(name="Target", description="The direction and speed the finch wants to move in", default=(0.0, 1.0, 0.0), min=sys.float_info.min, max=sys.float_info.max, soft_min=sys.float_info.min, soft_max=sys.float_info.max, step=3, precision=2, options={'ANIMATABLE'}, subtype='NONE', size=3, update=None, get=None, set=None)
-	
-	# The current rotational forces
-	bpy.types.Object.finch_rotation = bpy.props.FloatVectorProperty(name="Rotation", description="The current rotational forces", default=(0.0, 0.0, 0.0), min=sys.float_info.min, max=sys.float_info.max, soft_min=sys.float_info.min, soft_max=sys.float_info.max, step=3, precision=2, options={'ANIMATABLE'}, subtype='NONE', size=3, update=None, get=None, set=None)
+	bpy.types.Object.finch_target = bpy.props.FloatVectorProperty(name="Target", description="The direction and speed the finch wants to move in", default=(0.0, 0.1, 0.0), step=3, precision=2, options={'ANIMATABLE'})
 	
 	# The thrust/displacement
-	bpy.types.Object.finch_thrust = bpy.props.FloatVectorProperty(name="Thrust", description="The current rotational forces", default=(0.0, 0.0, 0.0), min=sys.float_info.min, max=sys.float_info.max, soft_min=sys.float_info.min, soft_max=sys.float_info.max, step=3, precision=2, options={'ANIMATABLE'}, subtype='NONE', size=3, update=None, get=None, set=None)
+	bpy.types.Object.finch_move = bpy.props.FloatVectorProperty(name="Movement", description="The current movement", default=(0.0, 0.1, 0.0), step=3, precision=2, options={'ANIMATABLE'})
 	
 
 	bpy.utils.register_class(Object_finch)
@@ -95,8 +118,7 @@ def unregister():
 	
 	del bpy.types.Object.finch_enabled
 	del bpy.types.Object.finch_target
-	del bpy.types.Object.finch_rotation
-	del bpy.types.Object.finch_thrust
+	del bpy.types.Object.finch_move
 
 	
 	bpy.utils.unregister_class(Object_finch)
