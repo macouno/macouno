@@ -735,6 +735,8 @@ def cast_loop(bme=None, corners=0, falloff_scale=1.0, falloff_shape='STR',corner
 	else:
 		bm = bme
 		
+	print(corners, falloff_scale, falloff_shape)
+		
 	# Get a heap of lists to work with later!
 	selFaces = get_selected_faces(bm)
 	selVerts = get_selected_verts(bm)
