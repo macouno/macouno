@@ -31,7 +31,8 @@ bl_info = {
 	"description": "Cast the outside of your selection to a specific shape",
 	"warning": "",
 	"wiki_url": "",
-	"tracker_url": "",
+	"tracker_url": "",\
+	"support": 'TESTING',\
 	"category": "Mesh"}
 	
 	

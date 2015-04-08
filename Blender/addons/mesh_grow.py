@@ -32,6 +32,7 @@ bl_info = {
 	"warning": "",
 	"wiki_url": "",
 	"tracker_url": "",
+	"support": 'TESTING',
 	"category": "Mesh"}
 	
 	

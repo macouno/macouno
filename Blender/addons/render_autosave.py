@@ -26,6 +26,7 @@ bl_info = {
 	"description": "Auto save every render",
 	"wiki_url": "",
 	"tracker_url": "",
+	"support": 'TESTING',
 	"category": "Render"}
 
 # ########################################################
