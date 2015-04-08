@@ -20,8 +20,8 @@
 bl_info = {
     "name": "Street Light",
     "author": "macouno",
-    "version": (2, 0),
-    "blender": (2, 59, 0),
+    "version": (0, 1),
+    "blender": (2, 70, 0),
     "location": "View3D > Add > Mesh > Light",
     "description": "Grow a street light",
     "warning": "",
@@ -39,6 +39,10 @@ def AddLight():
 	bpy.ops.mesh.primitive_circle_add(vertices=24, radius=1, fill_type='TRIFAN', view_align=False, enter_editmode=False, location=(0, 0, 0))
 
 	bpy.ops.object.mode_set(mode='EDIT')
+	
+	# Change Selection mode to face selection
+	lastSelectioMode = bpy.context.tool_settings.mesh_select_mode[:]
+	bpy.context.tool_settings.mesh_select_mode = (False, False, True)
 		
 	bpy.ops.mesh.select_all(action='SELECT')
 	
@@ -61,6 +65,8 @@ def AddLight():
 		debug=False,
 		)
 
+	# Reset selection mode
+	bpy.context.tool_settings.mesh_select_mode[:] = lastSelectioMode
 	
 	bpy.ops.object.mode_set(mode='OBJECT')
 

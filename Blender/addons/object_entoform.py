@@ -1269,8 +1269,8 @@ class Entoform_init(bpy.types.Operator):
 	bl_label = 'Entoform'
 	bl_options = {'REGISTER', 'UNDO'}
 	
-	d='Greg Robinson'
-	limit = 8
+	d='Guus'
+	limit = 4
 
 	dnaString = StringProperty(name="DNA", description="DNA string to define your shape", default=d, maxlen=100)
 	
