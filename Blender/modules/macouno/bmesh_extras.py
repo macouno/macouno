@@ -288,11 +288,15 @@ def get_outer_verts(faces):
 		for v in f1.verts:
 			if not v in outVerts:
 			
-				# Check all connected faces
-				for f2 in v.link_faces:
-					if not f2 in faces:
-						outVerts.append(v)
-						break
+				# If a vert is connected to only one or two faces it must be on the outside!
+				if len(v.link_faces) < 3:
+					outVerts.append(v)
+				else:
+					# Check all connected faces
+					for f2 in v.link_faces:
+						if not f2 in faces:
+							outVerts.append(v)
+							break
 					
 	return outVerts	
 	
@@ -302,24 +306,38 @@ def get_outer_verts(faces):
 def get_outer_edges(faces):
 	
 	outEdges = []
+	
 	for f1 in faces:
 		for e in f1.edges:
 			if not e in outEdges:
 			
-				 # Both the edge's verts should be connected to a non selected face (the same!)
-				outFound = False
+				# If both verts are only connected to two faces or less... it must be an outer edge!
+				cntFaces = 0
 				for v in e.verts:
-					if outFound is False:
-						for f2 in v.link_faces:
-							if not f2 in faces:
-								if outFound is False:
-									outFound = []
-								outFound.append(f2)
-					else:
-						for f2 in v.link_faces:
-							if f2 in outFound:
+					if len(v.link_faces) < 3:
+						cntFaces += 1
+				
+				if cntFaces > 1:
+					outFound = True
+				else:
+					 # Both the edge's verts should be connected to a non selected face (the same!).. or two or less faces
+					outFound = False
+					for v in e.verts:
+					
+						if outFound is False:
+							for f2 in v.link_faces:
+								if not f2 in faces:
+									if outFound is False:
+										outFound = []
+									outFound.append(f2)
+						else:
+							if len(v.link_faces) < 3:
 								outFound = True
-								break
+							else:
+								for f2 in v.link_faces:
+									if f2 in outFound:
+										outFound = True
+										break
 					
 				if outFound is True:
 					outEdges.append(e)
@@ -329,7 +347,20 @@ def get_outer_edges(faces):
 	
 	
 # Get the center point of a list of faces
-def get_center(faces):
+def get_vert_center(verts):
+	
+	c = mathutils.Vector()
+	cnt = 0
+	
+	for v in verts:
+		c += v.co
+		cnt += 1
+			
+	return c / cnt		
+	
+	
+# Get the center point of a list of faces
+def get_face_center(faces):
 	
 	c = mathutils.Vector()
 	cnt = 0
@@ -709,13 +740,13 @@ def cast_loop(bme=None, corners=0, falloff_scale=1.0, falloff_shape='STR',corner
 	selVerts = get_selected_verts(bm)
 	outVerts = get_outer_verts(selFaces)
 	outEdges = get_outer_edges(selFaces)
-	cent = get_center(selFaces)
+	cent = get_vert_center(selVerts )
 	normal = get_normal(selFaces)
+	inVerts = []
 	
 	if len(outVerts):
 	
 		# Let's quickly make a list of inner verts
-		inVerts = []
 		for v in selVerts:
 			if not v in outVerts:
 				inVerts.append(v)
@@ -756,18 +787,18 @@ def cast_loop(bme=None, corners=0, falloff_scale=1.0, falloff_shape='STR',corner
 
 		
 		# As a final step... we want them to be rotated neatly around the center...
-		step = math.radians(360) / (len(outEdges)+1)
+		step = math.radians(360) / (len(outEdges))
 		
 
 		# Now that we found the top vert we can start looping through to put them in the right position
 		loopVerts = [outVerts[topVert]]
 		outEdges, loopVerts = loop_step(outVerts[topVert],loopVerts,step,outEdges,cent,False)
 		
-		
 		# Set corner group weight to 0.0 because the shape is a circle (will be reset to 1.0 later for the actual corners)
-		if not corner_group is None:
+		if corner_group:
 			bm, group_index = add_to_group(bme=bm,verts=outVerts, newGroup=False, groupName=corner_group, weight=0.0)
-				
+		
+		
 		if corners:
 		
 			# Initiate a list of all corner verts so we can set the weight accordingly later (best done in one move)
@@ -785,8 +816,8 @@ def cast_loop(bme=None, corners=0, falloff_scale=1.0, falloff_shape='STR',corner
 			factor = 1.0
 			curve = falloff_curve.curve(falloff_shape, 'mult')
 			
-			for i, v in enumerate(loopVerts):
 			
+			for i, v in enumerate(loopVerts):
 				stepPos = i % stepLen
 				
 				# Get a normalized version of the current relative position
@@ -857,17 +888,16 @@ def cast_loop(bme=None, corners=0, falloff_scale=1.0, falloff_shape='STR',corner
 						bLine *= factor
 						
 						v.co = bLine + cent
-						
+				
 			if len(cornerVerts):
 				bm, group_index = add_to_group(bme=bm,verts=cornerVerts, newGroup=False, groupName=corner_group, weight=1.0)
-			
-						
+				
 		# I want to make sure these verts are inside the loop!
 		# So we move all verts halfway towards the center before smoothing (neat results in entoforms)
 		for v in inVerts:
 			relPos = cent - v.co
 			v.co += (relPos * 0.5)
-			
+
 		#for i in range(100):
 		# SMOOTH THE VERTS MAN!!!
 		smooth_verts(verts=inVerts,loops=10)
