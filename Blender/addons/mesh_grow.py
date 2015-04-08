@@ -83,6 +83,10 @@ class Grow():
 		# Go into object mode for the initial stages
 		bpy.ops.object.mode_set(mode='OBJECT')
 		self.averageLength = mesh_extras.get_average_outer_edge_length()
+		if self.averageLength == 0.0:
+			print('ERROR NO OUTER EDGES FOUND')
+			return
+			
 		# Now this is an added bit only for use with entoform.py
 		
 		# This matrix may already be set by a previous grow function running making this shape (just being consistent)
@@ -97,6 +101,7 @@ class Grow():
 			print('GOT checkmatrix')
 		except:
 			self.checkMatrix = False
+
 		
 		# Make the actions
 		actions = []
@@ -126,6 +131,8 @@ class Grow():
 			self.newX = self.translated / translation
 			
 			self.mark('transcal')
+			self.mark(self.translated)
+			self.mark(translation)
 			
 			# Lets check.. if we move beyond the wanted result in this step... we quit!
 			if self.translated == translation:
@@ -273,7 +280,7 @@ class Grow():
 			now = time.time()
 			jump = now - self.markTime
 			self.markTime = now
-			print(desc.rjust(10, ' '),jump)		
+			print(str(desc).rjust(20, ' '),jump)		
 		
 		
 		
@@ -314,7 +321,7 @@ class Grow_init(bpy.types.Operator):
 	
 	steps = BoolProperty(name='Retain steps', description='Keep the step count in a property', default=False)
 	
-	debug = BoolProperty(name='Debug', description='Get timing info in the console', default=False)
+	debug = BoolProperty(name='Debug', description='Get timing info in the console', default=True)
 
 	@classmethod
 	def poll(cls, context):

@@ -258,15 +258,20 @@ def get_shortest_outer_edge_length():
 # Get the average length of the outer edges of the current selection
 def get_average_outer_edge_length():
 
+	# Get the active object
 	ob = bpy.context.active_object
 
 	ave = 0.0
 	me = ob.data
 	
+	# Get  alist of all verts of non selected faces
 	delPolygons = [p.vertices for p  in me.polygons if not p.select]
+	
+	# Get a list of all selected edges
 	selEdges = [e.vertices for e in me.edges if e.select]
 
-	if len(selEdges) and len(delPolygons):
+	# See if there's any selected edges at all
+	if len(selEdges):
 	
 		number = 0
 		
@@ -275,14 +280,28 @@ def get_average_outer_edge_length():
 			v0 = eVerts[0]
 			v1 = eVerts[1]
 			
-			for pVerts in delPolygons:
-				if v0 in pVerts and v1 in pVerts:
-					number += 1
-					ave += (me.vertices[v0].co - me.vertices[v1].co).length
-					break
+			# Find any polygons that have both verts
+			fnd = 0
+			for p in me.polygons:
+				if v0 in p.vertices and v1 in p.vertices:
+					fnd += 1
+					
+			if fnd == 1:
+				number += 1
+				ave += (me.vertices[v0].co - me.vertices[v1].co).length
+				
+			elif len(delPolygons):
+			
+				# See if both verts are part of a non selected polygon (if so it's on the outside of the selection
+				for pVerts in delPolygons:
+					if v0 in pVerts and v1 in pVerts:
+						number += 1
+						ave += (me.vertices[v0].co - me.vertices[v1].co).length
+						break
 						
 		if number:
 			ave /= number
+				
 			
 	return ave
 
