@@ -30,14 +30,38 @@ bl_info = {
 	"support": 'TESTING',
     "category": "Add Mesh"}
 
-import bpy
+import bpy, mathutils, math
 from macouno import bmesh_extras
+from mathutils import Matrix
 
+
+##------------------------------------------------------------
+# calculates the matrix for the new object
+# depending on user pref
+def align_matrix(context):
+    loc = Matrix.Translation(context.scene.cursor_location)
+    obj_align = context.user_preferences.edit.object_align
+    if (context.space_data.type == 'VIEW_3D'
+        and obj_align == 'VIEW'):
+        rot = context.space_data.region_3d.view_matrix.to_3x3().inverted().to_4x4()
+    else:
+        rot = Matrix()
+    align_matrix = loc * rot
+    return align_matrix
+	
+
+def scale(val):
+	bpy.ops.transform.resize(value=val, constraint_axis=(False, False, False), constraint_orientation='GLOBAL', mirror=False, proportional=bpy.context.tool_settings.proportional_edit, proportional_edit_falloff=bpy.context.tool_settings.proportional_edit_falloff, proportional_size=1, snap=bpy.context.tool_settings.use_snap, snap_target=bpy.context.tool_settings.snap_target, snap_point=(0, 0, 0), snap_align=False, snap_normal=(0, 0, 0), release_confirm=False)
+	
 
 def AddLight():
 
-	bpy.ops.mesh.primitive_circle_add(vertices=24, radius=1, fill_type='TRIFAN', view_align=False, enter_editmode=False, location=(0, 0, 0))
+	# let's get the location of the 3d cursor
+	curLoc = bpy.context.scene.cursor_location
 
+	bpy.ops.mesh.primitive_circle_add(vertices=24, radius=1, fill_type='TRIFAN', view_align=False, enter_editmode=False, location=(0, 0, 0))
+	bpy.context.active_object.location = curLoc
+	
 	bpy.ops.object.mode_set(mode='EDIT')
 	
 	# Change Selection mode to face selection
@@ -49,26 +73,55 @@ def AddLight():
 	crn = 3
 	fScale = 0.5
 	# 		('STR', 'Straight',''),		('SPI', 'Spike',''),		('BUM', 'Bump',''),		('SWE', 'Sweep',''),
-	fShape = 'BUM'
+	fShape = 'DEC'
 
 	bmesh_extras.cast_loop(corners=crn, falloff_scale=fScale, falloff_shape=fShape)
 	
 	# Falloffs in LIN, INC, DEC, SWO, SPI, BUM, SWE
 	bpy.ops.mesh.grow(
 		translation=15,
-		rotation=(0.0,0.0,0.0),
+		rotation=(0.0,math.radians(10),0.0),
 		rotation_falloff='LIN',
 		scale=0.5,
 		scale_falloff='LIN',
 		retain=True,
 		steps=True,
 		debug=False,
+		animate=True,
 		)
+	
+	bpy.ops.mesh.extrude_region()
+	
+	scale((4.0,4.0,4.0))
+	
+	crn = 4
+	fScale = 1.0
+	# 		('STR', 'Straight',''),		('SPI', 'Spike',''),		('BUM', 'Bump',''),		('SWE', 'Sweep',''),
+	fShape = 'STR'
+
+	bmesh_extras.cast_loop(corners=crn, falloff_scale=fScale, falloff_shape=fShape)
+	
+	bpy.ops.mesh.grow(
+		translation=2,
+		rotation=(0.0,0.0,0.0),
+		rotation_falloff='LIN',
+		scale=1.0,
+		scale_falloff='LIN',
+		retain=True,
+		steps=True,
+		debug=False,
+		animate=True,
+		)
+	
+	# Put the cursor at the selected faces
+	#bpy.ops.view3d.snap_cursor_to_selected()
 
 	# Reset selection mode
 	bpy.context.tool_settings.mesh_select_mode[:] = lastSelectioMode
 	
 	bpy.ops.object.mode_set(mode='OBJECT')
+	
+	#bpy.context.scene.cursor_location = mathutils.Vector((0.0,1.0,0.0))
 
 	return
 

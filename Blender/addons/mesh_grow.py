@@ -54,11 +54,12 @@ from macouno import  mesh_extras, misc, falloff_curve
 class Grow():
 
 	# Initialise the class
-	def __init__(self, context, translation, rotation, rotation_falloff, scale, scale_falloff, retain, steps, debug):
+	def __init__(self, context, translation, rotation, rotation_falloff, scale, scale_falloff, retain, steps, debug, animate):
 		
 		self.startTime = time.time()
 		self.markTime = self.startTime
 		self.debug = debug
+		self.animate = animate
 		
 		self.context = context
 		self.ob = context.active_object
@@ -151,7 +152,11 @@ class Grow():
 			self.iteration += 1
 			if steps:
 				self.ob['growsteps'] = self.iteration
-					
+			
+			
+			if self.animate:
+				bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
+			
 		# Save this matrix, in case we grow again...
 		if retain:
 			self.ob['growmatrix'] = self.transformMatrix
@@ -161,6 +166,7 @@ class Grow():
 			except:
 				pass
 
+		
 		self.mark('end')
 		
 		
@@ -322,6 +328,8 @@ class Grow_init(bpy.types.Operator):
 	steps = BoolProperty(name='Retain steps', description='Keep the step count in a property', default=False)
 	
 	debug = BoolProperty(name='Debug', description='Get timing info in the console', default=True)
+	
+	animate = BoolProperty(name='Animate', description='Refresh the view on every step', default=False)
 
 	@classmethod
 	def poll(cls, context):
@@ -329,7 +337,7 @@ class Grow_init(bpy.types.Operator):
 		return (obj and obj.type == 'MESH' and bpy.context.tool_settings.mesh_select_mode[0] == False and bpy.context.tool_settings.mesh_select_mode[1] == False and bpy.context.tool_settings.mesh_select_mode[2] == True)
 
 	def execute(self, context):
-		GROW = Grow(context, self.translation, self.rotation, self.rotation_falloff, self.scale, self.scale_falloff, self.retain, self.steps, self.debug) 
+		GROW = Grow(context, self.translation, self.rotation, self.rotation_falloff, self.scale, self.scale_falloff, self.retain, self.steps, self.debug, self.animate) 
 		return {'FINISHED'}
 
 		
