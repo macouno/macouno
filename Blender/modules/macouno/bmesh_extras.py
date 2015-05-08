@@ -728,7 +728,7 @@ def loop_step(v1,loopVerts, step,outEdges, center, dVec):
 # Scale can be a nr between 0.01 and 100.0
 # Scale falloff should be a curve shape. ('STR', 'Straight',''),('SPI', 'Spike',''),('BUM', 'Bump',''),('SWE', 'Sweep',''),
 # corner_group = Name of a group you want all corners to be added to
-def cast_loop(bme=None, corners=0, falloff_scale=1.0, falloff_shape='STR',corner_group=None,redraw=True):
+def cast_loop(bme=None, corners=0, falloff_scale=1.0, falloff_shape='STR',corner_group=None,redraw=False):
 
 	if not bme:
 		bm = get_bmesh()
@@ -806,12 +806,12 @@ def cast_loop(bme=None, corners=0, falloff_scale=1.0, falloff_shape='STR',corner
 			# Initiate a list of all corner verts so we can set the weight accordingly later (best done in one move)
 			cornerVerts = []
 			
-			c = 360.0 / corners
+			c = round((360.0 / corners),2)
 			a = (180.0 - c) * 0.5
 			
 			stepLen = math.ceil(len(outVerts) / corners)
 			
-			print('stepLen', stepLen)
+			#print('stepLen', stepLen)
 			
 			aLine = False
 			
@@ -823,18 +823,18 @@ def cast_loop(bme=None, corners=0, falloff_scale=1.0, falloff_shape='STR',corner
 			loopCnt = len(loopVerts)
 			cornerCnt = math.floor(loopCnt / corners)
 			
-			print('\n',loopCnt,cornerCnt)
+			#print('\n',loopCnt,cornerCnt)
 			
 			
 			for i, v in enumerate(loopVerts):
 			
 				
-				if(i>9):
-					return
+				#if(i>9):
+				#	return
 					
 				stepPos = i % stepLen
 				
-				print(i,'stepPos',stepPos)
+				#print(i,'stepPos',stepPos)
 				
 				# Get a normalized version of the current relative position
 				line = mathutils.Vector(v.co - cent).normalized()
@@ -852,13 +852,13 @@ def cast_loop(bme=None, corners=0, falloff_scale=1.0, falloff_shape='STR',corner
 				else:
 				
 					# Find the angle from the current starting line
-					cAng = round(aLine.angle(line),5)
-					print('ang',round(math.degrees(cAng)))
+					cAng = round(math.degrees(aLine.angle(line)),2)
+					#print('ang',cAng,c,(cAng >= c))
 					
 					# If the angle is bigger than a step, we make this the new start
-					if cAng >= round(math.radians(c),5):
+					if cAng >= c:
 					
-						print('found corner')
+						#print('found corner')
 					
 						#if corner_group: corner_group.add([v.index], 1.0, 'REPLACE')
 						if corner_group:
@@ -883,7 +883,7 @@ def cast_loop(bme=None, corners=0, falloff_scale=1.0, falloff_shape='STR',corner
 						if falloff_scale != 1.0 and falloff_shape != 'STR':
 						
 							# Find out how far we are from the start as a factor (fraction of one?)
-							angFac = cAng / math.radians(c)
+							angFac = cAng / c
 							newX = angFac
 							
 							# Create a nice curve object to represent the falloff
@@ -897,7 +897,7 @@ def cast_loop(bme=None, corners=0, falloff_scale=1.0, falloff_shape='STR',corner
 							currentX = newX
 							
 						# Find the corner of the new triangle
-						b = 180 - (a+math.degrees(cAng))
+						b = 180 - (a+cAng)
 						
 						# find the distance from the midpoint
 						A = math.sin(math.radians(a)) / (math.sin(math.radians(b))/midDist)

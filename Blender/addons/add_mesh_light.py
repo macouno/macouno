@@ -113,9 +113,8 @@ def AddLight():
 	bpy.ops.mesh.extrude_region()
 	
 
-	scale((4.0,4.0,4.0))
+	scale((2.0,2.0,2.0))
 	
-	return
 	
 	crn = 4
 	fScale = 1.0
@@ -128,7 +127,7 @@ def AddLight():
 		translation=2,
 		rotation=(0.0,0.0,0.0),
 		rotation_falloff='LIN',
-		scale=1.0,
+		scale=0.5,
 		scale_falloff='LIN',
 		retain=True,
 		steps=True,
