@@ -49,9 +49,29 @@ def align_matrix(context):
     align_matrix = loc * rot
     return align_matrix
 	
+	
+def get_override(area_type, region_type):
+    for area in bpy.context.screen.areas: 
+        if area.type == area_type:             
+            for region in area.regions:                 
+                if region.type == region_type:                    
+                    override = {'area': area, 'region': region} 
+                    return override
+    #error message if the area or region wasn't found
+    raise RuntimeError("Wasn't able to find", region_type," in area ", area_type,
+                        "\n Make sure it's open while executing script.")
 
+
+
+	
+	
 def scale(val):
-	bpy.ops.transform.resize(value=val, constraint_axis=(False, False, False), constraint_orientation='GLOBAL', mirror=False, proportional=bpy.context.tool_settings.proportional_edit, proportional_edit_falloff=bpy.context.tool_settings.proportional_edit_falloff, proportional_size=1, snap=bpy.context.tool_settings.use_snap, snap_target=bpy.context.tool_settings.snap_target, snap_point=(0, 0, 0), snap_align=False, snap_normal=(0, 0, 0), release_confirm=False)
+	
+	#we need to override the context of our operator    
+	override = get_override( 'VIEW_3D', 'WINDOW' )
+	
+	bpy.ops.transform.resize(override, value=val, constraint_axis=(False, False, False), constraint_orientation='GLOBAL', mirror=False, proportional=bpy.context.tool_settings.proportional_edit, proportional_edit_falloff=bpy.context.tool_settings.proportional_edit_falloff, proportional_size=1, snap=bpy.context.tool_settings.use_snap, snap_target=bpy.context.tool_settings.snap_target, snap_point=(0, 0, 0), snap_align=False, snap_normal=(0, 0, 0), release_confirm=False)
+	
 	
 
 def AddLight():
@@ -71,9 +91,9 @@ def AddLight():
 	bpy.ops.mesh.select_all(action='SELECT')
 	
 	crn = 3
-	fScale = 0.5
+	fScale = 1.5
 	# 		('STR', 'Straight',''),		('SPI', 'Spike',''),		('BUM', 'Bump',''),		('SWE', 'Sweep',''),
-	fShape = 'DEC'
+	fShape = 'BUM'
 
 	bmesh_extras.cast_loop(corners=crn, falloff_scale=fScale, falloff_shape=fShape)
 	
@@ -92,7 +112,10 @@ def AddLight():
 	
 	bpy.ops.mesh.extrude_region()
 	
+
 	scale((4.0,4.0,4.0))
+	
+	return
 	
 	crn = 4
 	fScale = 1.0

@@ -728,7 +728,7 @@ def loop_step(v1,loopVerts, step,outEdges, center, dVec):
 # Scale can be a nr between 0.01 and 100.0
 # Scale falloff should be a curve shape. ('STR', 'Straight',''),('SPI', 'Spike',''),('BUM', 'Bump',''),('SWE', 'Sweep',''),
 # corner_group = Name of a group you want all corners to be added to
-def cast_loop(bme=None, corners=0, falloff_scale=1.0, falloff_shape='STR',corner_group=None):
+def cast_loop(bme=None, corners=0, falloff_scale=1.0, falloff_shape='STR',corner_group=None,redraw=True):
 
 	if not bme:
 		bm = get_bmesh()
@@ -811,6 +811,8 @@ def cast_loop(bme=None, corners=0, falloff_scale=1.0, falloff_shape='STR',corner
 			
 			stepLen = math.ceil(len(outVerts) / corners)
 			
+			print('stepLen', stepLen)
+			
 			aLine = False
 			
 			currentX = 0.0
@@ -818,9 +820,21 @@ def cast_loop(bme=None, corners=0, falloff_scale=1.0, falloff_shape='STR',corner
 			factor = 1.0
 			curve = falloff_curve.curve(falloff_shape, 'mult')
 			
+			loopCnt = len(loopVerts)
+			cornerCnt = math.floor(loopCnt / corners)
+			
+			print('\n',loopCnt,cornerCnt)
+			
 			
 			for i, v in enumerate(loopVerts):
+			
+				
+				if(i>9):
+					return
+					
 				stepPos = i % stepLen
+				
+				print(i,'stepPos',stepPos)
 				
 				# Get a normalized version of the current relative position
 				line = mathutils.Vector(v.co - cent).normalized()
@@ -838,10 +852,13 @@ def cast_loop(bme=None, corners=0, falloff_scale=1.0, falloff_shape='STR',corner
 				else:
 				
 					# Find the angle from the current starting line
-					cAng = aLine.angle(line)
+					cAng = round(aLine.angle(line),5)
+					print('ang',round(math.degrees(cAng)))
 					
 					# If the angle is bigger than a step, we make this the new start
-					if cAng > math.radians(c):
+					if cAng >= round(math.radians(c),5):
+					
+						print('found corner')
 					
 						#if corner_group: corner_group.add([v.index], 1.0, 'REPLACE')
 						if corner_group:
@@ -890,6 +907,9 @@ def cast_loop(bme=None, corners=0, falloff_scale=1.0, falloff_shape='STR',corner
 						bLine *= factor
 						
 						v.co = bLine + cent
+				
+				if redraw:
+					bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
 				
 			if len(cornerVerts):
 				bm, group_index = add_to_group(bme=bm,verts=cornerVerts, newGroup=False, groupName=corner_group, weight=1.0)
