@@ -48,7 +48,7 @@ Additional links:
 
 import bpy, mathutils, math
 from bpy.props import EnumProperty, BoolProperty, FloatProperty, StringProperty
-from macouno import select_polygons, mesh_extras, misc, falloff_curve, bmesh_extras
+from macouno import select_polygons, mesh_extras, misc, falloff_curve, bmesh_extras, cast_loop
 
 # Bump stuff!
 class Cast_Loop():
@@ -64,7 +64,7 @@ class Cast_Loop():
 		else:
 			corners = 0;
 		
-		bmesh_extras.cast_loop(corners=corners, falloff_scale=scale,falloff_shape=scale_falloff,corner_group=corner_group)
+		cast_loop.cast(corners=corners, falloff_scale=scale,falloff_shape=scale_falloff,corner_group=corner_group)
 		return
 
 		

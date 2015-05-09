@@ -31,7 +31,7 @@ bl_info = {
     "category": "Add Mesh"}
 
 import bpy, mathutils, math
-from macouno import bmesh_extras, cast_loop
+from macouno import bmesh_extras, cast_loop, scene_update
 from mathutils import Matrix
 
 
@@ -107,7 +107,7 @@ def AddLight():
 		retain=True,
 		steps=True,
 		debug=False,
-		animate=True,
+		animate='RED',
 		)
 	
 	bpy.ops.mesh.extrude_region()
@@ -132,7 +132,7 @@ def AddLight():
 		retain=True,
 		steps=True,
 		debug=False,
-		animate=True,
+		animate='RED',
 		)
 	
 	# Put the cursor at the selected faces

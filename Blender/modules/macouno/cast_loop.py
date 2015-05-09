@@ -1,5 +1,5 @@
 import bpy, bmesh, mathutils, math
-from macouno import misc, falloff_curve, bmesh_extras
+from macouno import misc, falloff_curve, bmesh_extras, scene_update
 
 
 
@@ -236,7 +236,7 @@ def cast(bme=None, corners=0, falloff_scale=1.0, falloff_shape='STR',corner_grou
 						v.co = bLine + cent
 				
 				if redraw:
-					bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
+					scene_update.go(False, 'RED')
 				
 			if len(cornerVerts):
 				bm, group_index = add_to_group(bme=bm,verts=cornerVerts, newGroup=False, groupName=corner_group, weight=1.0)

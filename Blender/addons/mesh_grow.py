@@ -48,7 +48,7 @@ Additional links:
 
 import bpy, mathutils, math, time
 from bpy.props import IntProperty, EnumProperty, FloatVectorProperty, FloatProperty, BoolProperty
-from macouno import  mesh_extras, misc, falloff_curve
+from macouno import  mesh_extras, misc, falloff_curve, scene_update
 
 # Grow stuff!
 class Grow():
@@ -154,8 +154,8 @@ class Grow():
 				self.ob['growsteps'] = self.iteration
 			
 			
-			if self.animate:
-				bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
+			if self.animate == 'RED':
+				scene_update.go(False, 'ANI')
 			
 		# Save this matrix, in case we grow again...
 		if retain:
@@ -329,7 +329,16 @@ class Grow_init(bpy.types.Operator):
 	
 	debug = BoolProperty(name='Debug', description='Get timing info in the console', default=True)
 	
-	animate = BoolProperty(name='Animate', description='Refresh the view on every step', default=False)
+	# The falloffs we use
+	modes=(
+		('NON', 'No', ''),
+		('RED', 'Redraw', ''),
+		('ANI', 'Animate', ''),
+		)
+	
+	animate = EnumProperty(items=modes, name='Animate', description='What to do on update', default='NON')
+	
+	#animate = BoolProperty(name='Animate', description='Refresh the view on every step', default=False)
 
 	@classmethod
 	def poll(cls, context):
