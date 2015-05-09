@@ -31,7 +31,7 @@ bl_info = {
     "category": "Add Mesh"}
 
 import bpy, mathutils, math
-from macouno import bmesh_extras
+from macouno import bmesh_extras, cast_loop
 from mathutils import Matrix
 
 
@@ -95,7 +95,7 @@ def AddLight():
 	# 		('STR', 'Straight',''),		('SPI', 'Spike',''),		('BUM', 'Bump',''),		('SWE', 'Sweep',''),
 	fShape = 'BUM'
 
-	bmesh_extras.cast_loop(corners=crn, falloff_scale=fScale, falloff_shape=fShape)
+	cast_loop.cast(corners=crn, falloff_scale=fScale, falloff_shape=fShape)
 	
 	# Falloffs in LIN, INC, DEC, SWO, SPI, BUM, SWE
 	bpy.ops.mesh.grow(
@@ -121,7 +121,7 @@ def AddLight():
 	# 		('STR', 'Straight',''),		('SPI', 'Spike',''),		('BUM', 'Bump',''),		('SWE', 'Sweep',''),
 	fShape = 'STR'
 
-	bmesh_extras.cast_loop(corners=crn, falloff_scale=fScale, falloff_shape=fShape)
+	cast_loop.cast(corners=crn, falloff_scale=fScale, falloff_shape=fShape)
 	
 	bpy.ops.mesh.grow(
 		translation=2,
