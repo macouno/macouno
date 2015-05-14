@@ -254,6 +254,17 @@ class Grow():
 			return
 		
 		
+	def get_override(self, area_type, region_type):
+		for area in bpy.context.screen.areas: 
+			if area.type == area_type:             
+				for region in area.regions:                 
+					if region.type == region_type:                    
+						override = {'area': area, 'region': region} 
+						return override
+		#error message if the area or region wasn't found
+		raise RuntimeError("Wasn't able to find", region_type," in area ", area_type,
+							"\n Make sure it's open while executing script.")
+		
 		
 	# Extrude the selection (do not move it)
 	def extrude(self):
@@ -263,7 +274,10 @@ class Grow():
 	# Move the selection (always relative to the normal)
 	# val = (0, 0, 1.0)
 	def translate(self, val):
-		bpy.ops.transform.translate(value=val, constraint_axis=(False, False, False), constraint_orientation='GLOBAL', mirror=False, proportional=bpy.context.tool_settings.proportional_edit, snap=bpy.context.tool_settings.use_snap, release_confirm=False)
+		#we need to override the context of our operator    
+		override = self.get_override( 'VIEW_3D', 'WINDOW' )
+	
+		bpy.ops.transform.translate(override, value=val, constraint_axis=(False, False, False), constraint_orientation='GLOBAL', mirror=False, proportional=bpy.context.tool_settings.proportional_edit, snap=bpy.context.tool_settings.use_snap, release_confirm=False)
 		
 		
 	# Scale the selection (always relative to the normal)

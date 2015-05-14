@@ -12,6 +12,8 @@ It can be any of the following
 
 def go(debug=False, action='NON'):
 
+	return
+
 	if action == 'NON':
 		return
 

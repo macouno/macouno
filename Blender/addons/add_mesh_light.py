@@ -81,7 +81,7 @@ def AddLight():
 	poleMat = bpy.data.materials['pole']
 	lampMat = bpy.data.materials['lamp']
 
-	bpy.ops.mesh.primitive_circle_add(vertices=24, radius=1, fill_type='TRIFAN', view_align=False, enter_editmode=False, location=(0, 0, 0))
+	bpy.ops.mesh.primitive_circle_add(vertices=24, radius=0.1, fill_type='TRIFAN', view_align=False, enter_editmode=False, location=(0, 0, 0))
 	
 	bpy.context.active_object.location = curLoc
 	
@@ -118,7 +118,7 @@ def AddLight():
 	
 	# Falloffs in LIN, INC, DEC, SWO, SPI, BUM, SWE
 	bpy.ops.mesh.grow(
-		translation=15,
+		translation=4,
 		rotation=(0.0,math.radians(10),0.0),
 		rotation_falloff='LIN',
 		scale=0.5,
