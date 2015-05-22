@@ -8,11 +8,11 @@ It can be any of the following
 	Debug info (writes debug info to console)
 	Redraw scene (refresh interface)
 	Render animation (increases frame and renders a single image)
+	
+	NON, ANI, or RED
 '''
 
 def go(debug=False, action='NON'):
-
-	return
 
 	if action == 'NON':
 		return
@@ -43,7 +43,7 @@ def go(debug=False, action='NON'):
 			scn.frame_start = frm_start
 			scn.frame_end = frm_end
 			
-			bpy.ops.object.mode_set(mode='EDIT')
+	bpy.ops.object.mode_set(mode='EDIT')
 			
 	return
 			

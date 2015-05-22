@@ -135,10 +135,17 @@ def AddLight():
 		animate='RED',
 		)
 
-	bpy.context.object.active_material_index = 1
-	bpy.ops.object.material_slot_assign()
+
 		
-	bpy.ops.mesh.extrude_region()	
+	bpy.ops.mesh.extrude_region()
+	
+	bpy.ops.mesh.select_more()
+	bpy.context.object.active_material_index = 1
+	
+	bpy.ops.object.material_slot_assign()
+	
+	bpy.ops.mesh.select_less()
+
 
 	scale((2.0,2.0,2.0))
 	
@@ -151,7 +158,7 @@ def AddLight():
 	cast_loop.cast(corners=crn, falloff_scale=fScale, falloff_shape=fShape)
 	
 	bpy.ops.mesh.grow(
-		translation=2,
+		translation=0.5,
 		rotation=(0.0,0.0,0.0),
 		rotation_falloff='LIN',
 		scale=0.5,

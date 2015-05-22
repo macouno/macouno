@@ -154,8 +154,7 @@ class Grow():
 				self.ob['growsteps'] = self.iteration
 			
 			
-			if self.animate == 'RED':
-				scene_update.go(False, 'ANI')
+			scene_update.go(False, self.animate)
 			
 		# Save this matrix, in case we grow again...
 		if retain:
