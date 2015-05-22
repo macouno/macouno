@@ -78,29 +78,35 @@ def AddLight():
 
 	# let's get the location of the 3d cursor
 	curLoc = bpy.context.scene.cursor_location
-	poleMat = bpy.data.materials['pole']
-	lampMat = bpy.data.materials['lamp']
-
+	try:
+		poleMat = bpy.data.materials['pole']
+		lampMat = bpy.data.materials['lamp']
+	except:
+		print('No materials available')
+		
 	bpy.ops.mesh.primitive_circle_add(vertices=24, radius=0.1, fill_type='TRIFAN', view_align=False, enter_editmode=False, location=(0, 0, 0))
 	
 	bpy.context.active_object.location = curLoc
 	
 	ob = bpy.context.active_object
 	
-	if len(ob.material_slots) < 1:
-		# if there is no slot then we append to create the slot and assign
-		ob.data.materials.append(poleMat)
-	else:
-		# we always want the material in slot[0]
-		ob.material_slots[0].material = poleMat
+	try:
+		if len(ob.material_slots) < 1:
+			# if there is no slot then we append to create the slot and assign
+			ob.data.materials.append(poleMat)
+		else:
+			# we always want the material in slot[0]
+			ob.material_slots[0].material = poleMat
+			
+		if len(ob.material_slots) < 2:
+			# if there is no slot then we append to create the slot and assign
+			ob.data.materials.append(lampMat)
+		else:
+			# we always want the material in slot[0]
+			ob.material_slots[0].material = lampMat
+	except:
+		pass
 		
-	if len(ob.material_slots) < 2:
-		# if there is no slot then we append to create the slot and assign
-		ob.data.materials.append(lampMat)
-	else:
-		# we always want the material in slot[0]
-		ob.material_slots[0].material = lampMat
-	
 	bpy.ops.object.mode_set(mode='EDIT')
 	
 	# Change Selection mode to face selection

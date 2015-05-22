@@ -275,9 +275,9 @@ class Grow():
 	# val = (0, 0, 1.0)
 	def translate(self, val):
 		#we need to override the context of our operator    
-		override = self.get_override( 'VIEW_3D', 'WINDOW' )
+		#override = self.get_override( 'VIEW_3D', 'WINDOW' )
 	
-		bpy.ops.transform.translate(override, value=val, constraint_axis=(False, False, False), constraint_orientation='GLOBAL', mirror=False, proportional=bpy.context.tool_settings.proportional_edit, snap=bpy.context.tool_settings.use_snap, release_confirm=False)
+		bpy.ops.transform.translate(value=val, constraint_axis=(False, False, False), constraint_orientation='GLOBAL', mirror=False, proportional=bpy.context.tool_settings.proportional_edit, snap=bpy.context.tool_settings.use_snap, release_confirm=False)
 		
 		
 	# Scale the selection (always relative to the normal)
