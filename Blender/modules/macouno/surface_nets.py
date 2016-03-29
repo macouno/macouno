@@ -253,7 +253,15 @@ def make_volume(dims, f):
         z += dims[2][2]
 
     return Volume(volume, res)
-
+	
+	
+def create_dot():
+    return make_volume(
+        [[-1.0, 1.0, 1.0],
+         [-1.0, 1.0, 1.0],
+         [-1.0, 1.0, 1.0]],
+        lambda x, y, z: x * x + y * y + z * z - 1.0
+    )
 
 def create_sphere():
     return make_volume(

@@ -35,76 +35,39 @@ from macouno import bmesh_extras, scene_update
 from macouno.surface_nets import *
 from mathutils import Matrix
 
+Volume = namedtuple("Volume", "data dimms")
 
-
-##------------------------------------------------------------
-# calculates the matrix for the new object
-# depending on user pref
-def align_matrix(context):
-    loc = Matrix.Translation(context.scene.cursor_location)
-    obj_align = context.user_preferences.edit.object_align
-    if (context.space_data.type == 'VIEW_3D'
-        and obj_align == 'VIEW'):
-        rot = context.space_data.region_3d.view_matrix.to_3x3().inverted().to_4x4()
-    else:
-        rot = Matrix()
-    align_matrix = loc * rot
-    return align_matrix
-	
-	
-def get_override(area_type, region_type):
-    for area in bpy.context.screen.areas: 
-        if area.type == area_type:             
-            for region in area.regions:                 
-                if region.type == region_type:                    
-                    override = {'area': area, 'region': region} 
-                    return override
-    #error message if the area or region wasn't found
-    raise RuntimeError("Wasn't able to find", region_type," in area ", area_type,
-                        "\n Make sure it's open while executing script.")
-
-						
-						
-def scale(val):
-	
-	#we need to override the context of our operator    
-	override = get_override( 'VIEW_3D', 'WINDOW' )
-	
-	bpy.ops.transform.resize(override, value=val, constraint_axis=(False, False, False), constraint_orientation='GLOBAL', mirror=False, proportional=bpy.context.tool_settings.proportional_edit, proportional_edit_falloff=bpy.context.tool_settings.proportional_edit_falloff, proportional_size=1, snap=bpy.context.tool_settings.use_snap, snap_target=bpy.context.tool_settings.snap_target, snap_point=(0, 0, 0), snap_align=False, snap_normal=(0, 0, 0), release_confirm=False)
-	
-	
 
 def AddSurfaceNets():
 
-	bpy.ops.object.mode_set(mode='OBJECT')
+	bpy.ops.object.select_all(action='DESELECT')
 
 	# let's get the location of the 3d cursor
 	curLoc = bpy.context.scene.cursor_location
 	
 	mesher = SurfaceNetMesher()
+	
+	res = [5,5,5]
+	
+	data = array('f', zeros_of(res[0] * res[1] * res[2]))
+	
+	dot = Volume(dimms = dimms, data = data)
+	
 
-	volumes = [create_sphere(), create_torus()]
+	volumes = [dot]
+	#volumes = [create_sphere()] #, create_torus()]
 	for volume in volumes:
+		#print(volume)
 		meshed_volume = mesher.mesh_volume(*volume)
 		mesh_data = mesh_from_data(*meshed_volume)
 		cube_object = bpy.data.objects.new("Cube_Object", mesh_data)
 
 		scene = bpy.context.scene
 		scene.objects.link(cube_object)
-	
-	
-	#bpy.context.active_object.location = curLoc
-	
-	
-	
-	
-	
-	#ob = bpy.context.active_object
-	
-	
-
-	
-	#bpy.ops.object.mode_set(mode='OBJECT')
+		
+		# Select the new object
+		cube_object.select = True
+		scene.objects.active = cube_object
 
 	return
 
