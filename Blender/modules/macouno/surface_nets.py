@@ -29,7 +29,7 @@
 #
 # Transpiled to Python by Angus Hollands (agoose77) 2016
 
-
+import bpy
 from array import array
 from collections import namedtuple
 from itertools import product
@@ -278,18 +278,3 @@ def mesh_from_data(vertices, faces, name="MesherResult"):
     mesh_data.from_pydata(vertices, [], faces)
     mesh_data.update()  # (calc_edges=True) not needed here
     return mesh_data
-
-
-if __name__ == "__main__":
-    import bpy
-    
-    mesher = SurfaceNetMesher()
-    
-    volumes = [create_sphere(), create_torus()]
-    for volume in volumes:
-        meshed_volume = mesher.mesh_volume(*volume)
-        mesh_data = mesh_from_data(*meshed_volume)
-        cube_object = bpy.data.objects.new("Cube_Object", mesh_data)
-    
-        scene = bpy.context.scene
-        scene.objects.link(cube_object)
