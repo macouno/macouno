@@ -21,7 +21,7 @@ bl_info = {
     "name": "Surface Nets",
     "author": "macouno",
     "version": (0, 1),
-    "blender": (2, 70, 0),
+    "blender": (2, 7, 0),
     "location": "View3D > Add > Mesh > Surface Nets",
     "description": "Create a mesh from a surface net",
     "warning": "",
@@ -38,6 +38,31 @@ from mathutils import Matrix
 Volume = namedtuple("Volume", "data dimms")
 
 
+
+# Get the location at a specific position in the grid
+def GetLocation(res, position):
+
+	# The total nr of positions per layer
+	layer = res[0] * res[1]
+	
+	# The relative position on the final z layer
+	xyRes = position % layer
+	
+	# The z position
+	z = (position - xyRes) / layer
+	
+	yRes = xyRes % res[1]
+	
+	y = (xyRes - yRes) / res[1]
+
+	x = yRes 	
+	
+	return mathutils.Vector((x,y,z))
+	
+	
+
+
+
 def AddSurfaceNets():
 
 	bpy.ops.object.select_all(action='DESELECT')
@@ -46,13 +71,45 @@ def AddSurfaceNets():
 	curLoc = bpy.context.scene.cursor_location
 	
 	mesher = SurfaceNetMesher()
+	cub = 10
 	
-	res = [5,5,5]
+	res = [cub,cub,cub]
+	len = res[0] * res[1] * res[2]
 	
-	data = array('f', zeros_of(res[0] * res[1] * res[2]))
+	data = array('f', zeros_of(len))
+	'''
+	# Make coordinates for every point in the volume (not needed if you use GetLocation
+	coords = []
 	
-	dot = Volume(dimms = dimms, data = data)
+	# Make a coordinate for every point in the volume
+	x = y = z = 0
+	for i in range(len):
+		
+		coords.append(mathutils.Vector((x, y, z)))
+
+		x = x + 1
+		if x == res[0]:
+			x = 0
+			y = y + 1
+		if y == res[1]:
+			y = 0
+			z = z + 1
 	
+	print(coords)
+	'''
+	
+	middle = mathutils.Vector((res[0]*0.5,res[1]*0.5,res[2]*0.5))
+	
+	for i in range(len):
+	
+		distV = middle - GetLocation(res, i) #coords[i]
+		dist = distV.length
+		
+		data[i] = round(dist - 2.5, 2)
+	
+	dot = Volume(dimms = res, data = data)
+	
+	#print(dot)
 
 	volumes = [dot]
 	#volumes = [create_sphere()] #, create_torus()]
