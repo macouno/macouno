@@ -52,19 +52,24 @@ class SurfaceNet():
 	
 		self.debug = debug
 		self.useCoords = useCoords
+		
+		self.growSpeed = 0.05
 		self.showGrowth = showGrowth
 		self.growing = False
-		self.currentList = []
-		self.targetList = []
 		
 		# Make the grid!
 		self.gridSize = 10
 		self.gridRes = [self.gridSize, self.gridSize, self.gridSize]
 		self.gridLen = self.gridRes[0] * self.gridRes[1] * self.gridRes[2]
 		
+		self.targetList = array('f', zeros_of(self.gridLen))
+		self.currentList = array('f', zeros_of(self.gridLen))
+		
 		# Make a new mesh and object for the surface
 		self.shapeMesh = bpy.data.meshes.new("Surface")
 		self.shapeObject = bpy.data.objects.new('Surface', self.shapeMesh)
+		
+		self.mesher = SurfaceNetMesher()
 		
 		scene = context.scene
 		scene.objects.link(self.shapeObject)
@@ -77,10 +82,7 @@ class SurfaceNet():
 		# let's get the location of the 3d cursor
 		curLoc = bpy.context.scene.cursor_location
 		
-		self.mesher = SurfaceNetMesher()
 		
-		self.targetList = array('f', zeros_of(self.gridLen))
-		self.currentList = copy(self.targetList)
 		
 		 # Make a list of all coordinates
 		if useCoords:
@@ -97,7 +99,7 @@ class SurfaceNet():
 			if self.useCoords:
 				distV = middle - self.coords[i]
 			else:
-				distV = middle - GetLocation(self.gridRes, i) #coords[i]
+				distV = middle - self.GetLocation(self.gridRes, i) #coords[i]
 				
 			dist = distV.length
 			
@@ -122,22 +124,63 @@ class SurfaceNet():
 	def GrowShape(self):
 	
 		if self.showGrowth:
-			# Create the meshed volume
-			meshed_volume = self.mesher.mesh_volume(*Volume(dimms = self.gridRes, data = self.targetList))
+		
+			self.growing = True
 			
-			# Apply the volume data to the mesh
-			self.shapeObject.data = mesh_from_data(*meshed_volume)
-			
-			scene_update.go()
+			if self.debug:
+				print('		- Starting growthspurt')
+				step = 1
+		
+			# Keep updating the mesh as long as we're growing
+			while self.growing:
+				
+
+					
+				self.growing = False
+				
+				for i, target in enumerate(self.targetList):
+				
+					current = self.currentList[i]
+					
+					if target != current:
+						
+						self.growing = True
+						
+						if target > current:
+							current += self.growSpeed
+							if current > target:
+								current = target
+								
+						elif target < current:
+							current -= self.growSpeed
+							if current < target:
+								current = target
+								
+						self.currentList[i] = current
+						
+				if self.debug:
+					print('			- Growing step '+str(step))
+					step += 1
+					
+				self.ApplyShape()
+				
 			
 		else:
+		
+			self.ApplyShape()
+		
+		
+		
+	def ApplyShape(self):
+	
 			# Create the meshed volume
-			meshed_volume = self.mesher.mesh_volume(*Volume(dimms = self.gridRes, data = self.targetList))
+			meshed_volume = self.mesher.mesh_volume(*Volume(dimms = self.gridRes, data = self.currentList))
 			
 			# Apply the volume data to the mesh
 			self.shapeObject.data = mesh_from_data(*meshed_volume)
 			
-			scene_update.go()
+			bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
+			#scene_update.go()
 		
 		
 		
