@@ -96,16 +96,15 @@ class SurfaceNet():
 		
 		for i in range(self.gridLen):
 		
-			if self.useCoords:
-				distV = middle - self.coords[i]
-			else:
-				distV = middle - self.GetLocation(self.gridRes, i) #coords[i]
+			distV = middle - self.GetCoord(i)
 				
 			dist = distV.length
 			
 			self.targetList[i] = round(dist - 2.5, 2)
 
 		self.GrowShape()
+		
+		self.GetNear(250)
 
 		# Select the new object
 		self.shapeObject.select = True
@@ -119,6 +118,61 @@ class SurfaceNet():
 			
 		return
 
+		
+		
+	# Get a list of all the points near this one
+	def GetNear(self, n):
+	
+		near = []
+		
+		here = self.GetCoord(n)
+		
+		for i in range(self.gridLen):
+	
+			distV = here - self.GetCoord(i)
+				
+			dist = distV.length
+			
+			if dist < 1.5:
+				near.append(i)
+		
+		print('found',len(near), 'near')
+		return near
+		
+		
+		
+	# Get the coord for this point
+	def GetCoord(self, n):
+
+		if self.useCoords:
+			return self.coords[n]
+		
+		return self.GetLocation(n)
+		
+		
+		
+	# Get the location at a specific position in the grid
+	def GetLocation(self, position):
+
+		res = self.gridRes
+		
+		xRes = res[1]
+
+		# The total nr of positions per layer
+		layer = res[0] * xRes
+		
+		# The relative position on the final z layer
+		xyRes = position % layer
+		
+		# The z position
+		z = (position - xyRes) / layer
+		
+		x = xyRes % xRes
+		
+		y = (xyRes - x) / xRes
+		
+		return mathutils.Vector((x,y,z))
+		
 		
 		
 	def GrowShape(self):
@@ -184,26 +238,6 @@ class SurfaceNet():
 		
 		
 		
-	# Get the location at a specific position in the grid
-	def GetLocation(self, res, position):
-
-		xRes = res[1]
-
-		# The total nr of positions per layer
-		layer = res[0] * xRes
-		
-		# The relative position on the final z layer
-		xyRes = position % layer
-		
-		# The z position
-		z = (position - xyRes) / layer
-		
-		x = xyRes % xRes
-		
-		y = (xyRes - x) / xRes
-		
-		return mathutils.Vector((x,y,z))
-		
 
 		
 	# Make coordinates for every point in the volume (not needed if you use GetLocation
@@ -228,6 +262,7 @@ class SurfaceNet():
 
 		return coords
 
+		
 		
 
 class OpAddSurfaceNet(bpy.types.Operator):
