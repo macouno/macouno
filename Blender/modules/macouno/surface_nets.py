@@ -40,6 +40,9 @@ MesherResult = namedtuple("MesherResult", "vertices faces")
 Volume = namedtuple("Volume", "data dimms")
 
 
+def ones_of(n):
+    return (1.0 for i in range(n))
+
 def zeros_of(n):
     return (0 for i in range(n))
 

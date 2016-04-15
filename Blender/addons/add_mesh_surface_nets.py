@@ -47,23 +47,40 @@ class SurfaceNet():
 	def __init__(self, context, debug, useCoords, showGrowth):
 	
 		#bpy.ops.object.mode_set(mode='OBJECT')
+		self.debug = debug
+		
+		if self.debug:
+			print('\n	--- STARTING ---\n')
+			self.startTime = time.time()
 			
+		# LOTS OF SETTINGS
 		bpy.ops.object.select_all(action='DESELECT')
 	
-		self.debug = debug
+		
 		self.useCoords = useCoords
 		
 		self.growSpeed = 0.05
+		self.stateLength = 100
 		self.showGrowth = showGrowth
 		self.growing = False
 		
+		# The max and min values for our grid
+		self.limitMax = 1.0
+		self.limitMin = -1.0
+		
 		# Make the grid!
 		self.gridSize = 10
-		self.gridRes = [self.gridSize, self.gridSize, self.gridSize]
-		self.gridLen = self.gridRes[0] * self.gridRes[1] * self.gridRes[2]
+		self.gridX = self.gridSize
+		self.gridY = self.gridSize
+		self.gridZ = self.gridSize
+		self.gridRes = [self.gridX, self.gridY, self.gridZ]
+		self.gridLen = self.gridX * self.gridY * self.gridZ
 		
-		self.targetList = array('f', zeros_of(self.gridLen))
-		self.currentList = array('f', zeros_of(self.gridLen))
+		# Make target and state values
+		self.targetList = array('f', ones_of(self.gridLen))
+		self.currentList = copy(self.targetList)
+		self.stateList = array('f', zeros_of(self.gridLen))
+		
 		
 		# Make a new mesh and object for the surface
 		self.shapeMesh = bpy.data.meshes.new("Surface")
@@ -74,15 +91,9 @@ class SurfaceNet():
 		scene = context.scene
 		scene.objects.link(self.shapeObject)
 
-		if self.debug:
-			print('\n	--- STARTING ---\n')
-			self.startTime = time.time()
-
 
 		# let's get the location of the 3d cursor
 		curLoc = bpy.context.scene.cursor_location
-		
-		
 		
 		 # Make a list of all coordinates
 		if useCoords:
@@ -92,24 +103,17 @@ class SurfaceNet():
 		elif self.debug:
 			print('		- Calculating coordinates live')
 		
-		middle = mathutils.Vector((self.gridRes[0]*0.5,self.gridRes[1]*0.5,self.gridRes[2]*0.5))
 		
-		for i in range(self.gridLen):
-		
-			distV = middle - self.GetCoord(i)
+		self.MakeBall()
 				
-			dist = distV.length
-			
-			self.targetList[i] = round(dist - 2.5, 2)
-
 		self.GrowShape()
 		
-		self.GetNear(250)
+		# Testing a function to get points near eacht other
+		#self.GetNear(250)
 
 		# Select the new object
 		self.shapeObject.select = True
 		scene.objects.active = self.shapeObject
-		
 
 		if self.debug:
 			now = time.time()
@@ -118,6 +122,25 @@ class SurfaceNet():
 			
 		return
 
+		
+		
+	# Make a sphere in the middle of the grid
+	def MakeBall(self):
+	
+		# Let's make a ball within a certain distance from the middle
+		middle = mathutils.Vector((self.gridX*0.5,self.gridY*0.5,self.gridZ*0.5))
+		
+		for i in range(self.gridLen):
+		
+			distV = middle - self.GetCoord(i)
+			
+			val = self.LimitValue(round(distV.length - 2.5, 2))
+			
+			if val != self.limitMax:
+				self.stateList[i] = 1.0
+				self.targetList[i] = val
+		
+		
 		
 		
 	# Get a list of all the points near this one
@@ -151,6 +174,18 @@ class SurfaceNet():
 		
 		
 		
+		
+	# Limit a value to a global max and minimum
+	def LimitValue(self, n):
+		if n > self.limitMax:
+			return self.limitMax
+		elif n < self.limitMin:
+			return self.limitMin
+		return n
+		
+		
+		
+		
 	# Get the location at a specific position in the grid
 	def GetLocation(self, position):
 
@@ -175,9 +210,15 @@ class SurfaceNet():
 		
 		
 		
+	# Let's show the growth of our shape!
 	def GrowShape(self):
 	
-		if self.showGrowth:
+		# Do not grow but apply the new shape immediately
+		if not self.showGrowth:
+			self.currentList = copy(self.targetList)
+			self.ApplyShape()
+			
+		else:
 		
 			self.growing = True
 			
@@ -187,41 +228,48 @@ class SurfaceNet():
 		
 			# Keep updating the mesh as long as we're growing
 			while self.growing:
-				
-
 					
 				self.growing = False
 				
 				for i, target in enumerate(self.targetList):
 				
+					state = self.stateList[i]
+				
 					current = self.currentList[i]
 					
-					if target != current:
+					# If this location is growing... we know what to do!
+					if state != 0:
 						
-						self.growing = True
+						# Keep growing!
+						if not self.growing:
+							self.growing = True
 						
-						if target > current:
-							current += self.growSpeed
-							if current > target:
-								current = target
-								
-						elif target < current:
-							current -= self.growSpeed
-							if current < target:
-								current = target
-								
-						self.currentList[i] = current
+						# If we haven't reached the end of the growth cycle...
+						if state < self.stateLength:
+							
+							dif = self.targetList[i] - self.currentList[i]
+							
+							dif /= (self.stateLength - state)
+							
+							self.currentList[i] += dif
+							
+							self.stateList[i] += 1
+							
+						# If the state has reached its maximum we are done growing
+						else:
+							
+							self.currentList[i] = self.targetList[i]
+							self.stateList[i] = 0
+
+					
+
 						
 				if self.debug:
 					print('			- Growing step '+str(step))
 					step += 1
 					
 				self.ApplyShape()
-				
-			
-		else:
-		
-			self.ApplyShape()
+
 		
 		
 		
