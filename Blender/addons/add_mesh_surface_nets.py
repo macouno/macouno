@@ -60,7 +60,7 @@ class SurfaceNet():
 		self.useCoords = useCoords
 		
 		self.growSpeed = 0.05
-		self.stateLength = 100
+		self.stateLength = 10
 		self.showGrowth = showGrowth
 		self.growing = False
 		
@@ -133,22 +133,35 @@ class SurfaceNet():
 		for i in range(self.gridLen):
 		
 			distV = middle - self.GetCoord(i)
+			dist = distV.length
 			
-			val = self.LimitValue(round(distV.length - 2.5, 2))
+			val = self.LimitValue(round(dist - 2.5, 2))
+			
+			if dist < 0.1:
+				
+				# SET A STATE!
+				print("STARTING POINT")
+				self.stateList[i] = 1
 			
 			if val != self.limitMax:
-				self.stateList[i] = 1.0
+			
+				#self.stateList[i] = 1.0
 				self.targetList[i] = val
+				
+				
 		
 		
 		
 		
-	# Get a list of all the points near this one
-	def GetNear(self, n):
+	# Get a list of all the points near this one (if state is true re
+	def GetNear(self, n, stateCheck):
 	
 		near = []
 		
 		here = self.GetCoord(n)
+		
+		if stateCheck:
+			halfState = self.stateLength * 0.5
 		
 		for i in range(self.gridLen):
 	
@@ -157,9 +170,15 @@ class SurfaceNet():
 			dist = distV.length
 			
 			if dist < 1.5:
-				near.append(i)
+				
+				if stateCheck and self.stateList[i] > halfState:
+					return 1
+				else:
+					near.append(i)
 		
-		print('found',len(near), 'near')
+		if stateCheck:
+			return 0
+			
 		return near
 		
 		
@@ -235,10 +254,13 @@ class SurfaceNet():
 				
 					state = self.stateList[i]
 				
-					current = self.currentList[i]
+					if state == 0 and self.targetList != self.currentList:
+					
+						state = self.GetNear(i, 'state')
+				
 					
 					# If this location is growing... we know what to do!
-					if state != 0:
+					if state > 0:
 						
 						# Keep growing!
 						if not self.growing:
@@ -253,7 +275,7 @@ class SurfaceNet():
 							
 							self.currentList[i] += dif
 							
-							self.stateList[i] += 1
+							self.stateList[i] = state + 1
 							
 						# If the state has reached its maximum we are done growing
 						else:
