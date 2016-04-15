@@ -57,10 +57,11 @@ class SurfaceNet():
 		bpy.ops.object.select_all(action='DESELECT')
 	
 		
+		self.spentNear = 0.0
 		self.useCoords = useCoords
 		
 		self.growSpeed = 0.05
-		self.stateLength = 10
+		self.stateLength = 100
 		self.showGrowth = showGrowth
 		self.growing = False
 		
@@ -117,6 +118,7 @@ class SurfaceNet():
 
 		if self.debug:
 			now = time.time()
+			print('	---- SPENT ---',self.spentNear,'NEAR')
 			print('		- Time spent =', str(round((now - self.startTime), 3))+'s')
 			print('\n	--- FINISHED SURFACE NET ---\n')
 			
@@ -150,6 +152,75 @@ class SurfaceNet():
 				
 				
 		
+		
+		
+	def GetGridNext(self, n, near):
+
+		# Haal de volgende op als deze niet aan het begin zit
+		if (n) % self.gridX:
+			near.append(n-1)
+		
+		# Haal vorige op als deze niet aan het eind zit  
+		if (n+1) % self.gridX:
+			near.append(n+1)
+
+		return near
+
+		
+		
+	def GetGridUp(self, n, near):
+
+		Np = (n-self.gridX)
+		if Np >= 0 :
+			near.append(Np)
+
+			near = self.GetGridNext(Np, near)
+		
+		
+		Np = (n+self.gridX)
+		if Np < self.gridLen :
+			near.append(Np)
+
+			near = self.GetGridNext(Np, near)
+
+		return near
+
+
+
+	def GetGridNear(self, n):
+		
+		near = []
+
+		# Get the next items on this level
+		near = self.GetGridNext(n, near)
+		near = self.GetGridUp(n, near)
+		
+		# Find how many items per level
+		LvlLen = self.gridX * self.gridY
+		
+		
+		nearUp = []
+		nearDown = []
+		if n > LvlLen : 
+			
+			nearUp = copy(near)
+			for i,m in enumerate (nearUp) :
+
+				nearUp[i] -= LvlLen
+			nearUp.append (n-LvlLen)
+				
+		if n <((self.gridLen-1)-LvlLen) :
+			nearDown = copy(near)
+			
+			for i,m in enumerate (nearDown) :
+				nearDown[i] += LvlLen
+			nearDown.append (n+LvlLen)
+			
+			
+		near += nearUp 
+		near += nearDown
+		
+		return near
 		
 		
 		
@@ -254,10 +325,23 @@ class SurfaceNet():
 				
 					state = self.stateList[i]
 				
-					if state == 0 and self.targetList != self.currentList:
 					
-						state = self.GetNear(i, 'state')
-				
+					if state == 0 and self.targetList[i] != self.currentList[i]:
+					
+						start = time.time()
+						
+						#state = self.GetNear(i, 'state')
+						
+						near = self.GetGridNear(i)
+						
+						#print(i, sorted(near))
+						for n in near:
+							if self.stateList[n] > 0:
+								state = 1
+								break
+							
+						self.spentNear += time.time() - start
+					
 					
 					# If this location is growing... we know what to do!
 					if state > 0:
@@ -269,6 +353,23 @@ class SurfaceNet():
 						# If we haven't reached the end of the growth cycle...
 						if state < self.stateLength:
 							
+							
+							# Start my neighbours
+							if state == round(self.stateLength*0.5):
+							
+								'''
+								start = time.time()
+								
+								near = self.GetGridNear(i)
+								
+								for n in near:
+									if self.stateList[n] == 0:
+										if self.targetList[n] != self.currentList[n]:
+											self.stateList[n] = 1
+										
+								self.spentNear += time.time() - start
+								'''
+								
 							dif = self.targetList[i] - self.currentList[i]
 							
 							dif /= (self.stateLength - state)
