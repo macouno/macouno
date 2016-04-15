@@ -62,6 +62,7 @@ class SurfaceNet():
 		
 		self.growSpeed = 0.05
 		self.stateLength = 100
+		self.stateHalf = round(self.stateLength * 0.5)
 		self.showGrowth = showGrowth
 		self.growing = False
 		
@@ -325,7 +326,7 @@ class SurfaceNet():
 				
 					state = self.stateList[i]
 				
-					
+					'''
 					if state == 0 and self.targetList[i] != self.currentList[i]:
 					
 						start = time.time()
@@ -341,7 +342,7 @@ class SurfaceNet():
 								break
 							
 						self.spentNear += time.time() - start
-					
+					'''
 					
 					# If this location is growing... we know what to do!
 					if state > 0:
@@ -355,9 +356,8 @@ class SurfaceNet():
 							
 							
 							# Start my neighbours
-							if state == round(self.stateLength*0.5):
+							if state == self.stateHalf:
 							
-								'''
 								start = time.time()
 								
 								near = self.GetGridNear(i)
@@ -368,7 +368,7 @@ class SurfaceNet():
 											self.stateList[n] = 1
 										
 								self.spentNear += time.time() - start
-								'''
+								
 								
 							dif = self.targetList[i] - self.currentList[i]
 							
