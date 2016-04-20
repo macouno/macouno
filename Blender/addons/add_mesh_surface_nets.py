@@ -326,7 +326,7 @@ class SurfaceNet():
 		near = []
 
 		# Get the next items on this level
-		near = self.GetGridX(n, near, -steps)	
+		near = self.GetGridX(n, near, -steps)
 		near = self.GetGridX(n, near, steps)
 		near = self.GetGridY(n, near, -steps)
 		near = self.GetGridY(n, near, steps)
