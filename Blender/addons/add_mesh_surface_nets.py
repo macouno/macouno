@@ -100,12 +100,13 @@ class SurfaceNet():
 		if useCoords:
 			if self.debug:
 				print('		- Generating list of coordinates')
-			self.coords = MakeCoords(self.gridLen, self.gridRes)
+			self.coords = self.MakeCoords(self.gridLen, self.gridRes)
 		elif self.debug:
 			print('		- Calculating coordinates live')
 		
 		
 		self.MakeBall()
+		#self.MakeStick()
 				
 		self.GrowShape()
 		
@@ -136,7 +137,7 @@ class SurfaceNet():
 			distV = middle - self.GetCoord(i)
 			dist = distV.length
 			
-			val = self.LimitValue(round(dist - 2.5, 2))
+			val = self.LimitValue(round(dist - 5, 2))
 			
 			if dist < 0.1:
 				
@@ -151,78 +152,186 @@ class SurfaceNet():
 				
 				
 		
+	def MakeStick(self):
+	
+		# Let's make a ball within a certain distance from the middle
+		middle = mathutils.Vector((self.gridX*0.5,self.gridY*0.5,self.gridZ*0.5))
+		
+		m = self.GetGridMiddle()
+		self.stateList[m] = 1
+		self.targetList[m] = -1
+		
+		near = []
+		near = self.GetGridX(m, near, 10)
+		
+		for n in near:
+			self.targetList[n] = -1
+	
+	
+		
+	# Get the midpoint of the grid
+	def GetGridMiddle(self):
+	
+		xLoc = round(self.gridX*0.5)
+		yLoc = math.floor(self.gridY*0.5)
+		zLoc = math.floor(self.gridZ*0.5)
+		
+		zDist = self.gridLevel * zLoc
+		yDist = self.gridX * yLoc
+		
+		return xLoc + zDist + yDist
+	
+	
+	
+	# Check to see if n is on the border of 
+	def IsGridEnd(self, n):
+	
+		# At the bottom level
+		if n < (self.gridLevel-1):
+			return True
+			
+		# At the top level
+		elif n > ((self.gridLen-self.gridLevel)-1):
+			return True
+			
+		# Find the position at this level
+		lvlPos = n % self.gridLevel
+		
+		# Now find the position in the gridY
+		xPos = lvlPos % self.gridY
+		
+		if xPos <= 0 or xPos >= (self.gridX-1):
+			return True
+		
+		yPos = lvlPos - xPos
+		if yPos > 0:
+			yPos = self.gridLevel / yPos
+		
+		if yPos <= 0 or yPos >= (self.gridY-1):
+			return True
+		
+		return False
+	
+		
 		
 	# Get the next and previous items on one axis
-	def GetGridNext(self, n, near):
+	def GetGridX(self, n, near, steps):
 
-		# Haal de volgende op als deze niet aan het begin zit
-		if (n) % self.gridX:
-			near.append(n-1)
-		
-		# Haal vorige op als deze niet aan het eind zit  
-		if (n+1) % self.gridX:
-			near.append(n+1)
+		if steps < 0:
+			for i in range(-(steps)):
+				s = i+1
+				ns = n-s
+				# Haal de volgende op als deze niet aan het begin zit
+				if ns > 1 and (ns % self.gridX) > 1:
+					near.append(ns)
+				else:
+					return near
+					
+		else:
+			
+			for i in range(steps):
+				ns = (n+1)+i
+				# Get the next point if we're not at the end
+				if ns % self.gridX:
+					near.append(ns)
+				else:
+					return near
 
 		return near
 
 		
 		
 	# Find the points on the next level
-	def GetGridUp(self, n, near):
+	def GetGridY(self, n, near, steps):
+	
+		if steps < 0:
+		
+			for i in range(-(steps)):
+				s = (i+1) * self.gridX
+				ns = n - s
+				# We want to know the placing on the current level!
+				thisLvl = ns % self.gridLevel
+				if thisLvl >= self.gridX:
+					near.append(ns)
+				else:
+					return near
+					
+		else:
+		
+			for i in range(steps):
+				s = (i+1) * self.gridX
+				ns = n + s
+				thisLvl = ns % self.gridLevel
+				if thisLvl < (self.gridLevel - self.gridX):
+					near.append(ns)
+				else:
+					return near
+			
 
+		'''
 		# Add the previous row
 		Np = n - self.gridX
-		if Np >= 0 :
+		if Np > 0 :
 			near.append(Np)
-			near = self.GetGridNext(Np, near)
+			near = self.GetGridX(Np, near, -steps)
+			near = self.GetGridX(Np, near, steps)
 		
 		# Add the next row
-		Np = (n+self.gridX)
-		if Np < self.gridLen :
+		Np = n + self.gridX
+		if Np < (self.gridLen-1):
 			near.append(Np)
 
-			near = self.GetGridNext(Np, near)
-
+			near = self.GetGridX(Np, near, -steps)
+			near = self.GetGridX(Np, near, steps)
+		'''
 		return near
-
-
 		
-	# Get all adjacent points
-	def GetGridNear(self, n):
-		
-		near = []
-
-		# Get the next items on this level
-		near = self.GetGridNext(n, near)
-		near = self.GetGridUp(n, near)
-		
-		# Find how many items per level
-		LvlLen = self.gridX * self.gridY
+	
+	
+	def GetGridZ(self, n, near, steps):
 		
 		nearUp = False
 		nearDown = False
-		
-		# Get the items a down from current
-		if n > self.gridLevel: 
-			
-			nearUp = copy(near)
-			for i,m in enumerate(nearUp):
-				nearUp[i] -= self.gridLevel
-			nearUp.append(n - self.gridLevel)
 				
 		# Get the items a level up from current
-		if n <((self.gridLen - 1) - self.gridLevel) :
+		if n > 0 and n < ((self.gridLen - (self.gridLevel*2))-1) :
 		
-			nearDown = copy(near)	
-			for i,m in enumerate(nearDown) :
-				nearDown[i] += self.gridLevel
-			nearDown.append (n + self.gridLevel)
+			nearUp = copy(near)	
+			for i,m in enumerate(nearUp) :
+				nearUp[i] += self.gridLevel
+				
+			nearUp.append(n + self.gridLevel)
 			
+			
+		# Get the items a down from current
+		if False and n > (self.gridLevel*2)-1: 
+			
+			nearDown = copy(near)
+			for i,m in enumerate(nearDown):
+				nearDown[i] -= self.gridLevel
+			nearDown.append(n - self.gridLevel)
 			
 		if nearUp:
 			near += nearUp
 		if nearDown:
 			near += nearDown
+
+		return near
+	
+	
+		
+	# Get all adjacent points
+	def GetGridNear(self, n, steps):
+		
+		near = []
+
+		# Get the next items on this level
+		near = self.GetGridX(n, near, -steps)	
+		near = self.GetGridX(n, near, steps)
+		near = self.GetGridY(n, near, -steps)
+		near = self.GetGridY(n, near, steps)
+		#near = self.GetGridZ(n,near, -steps)
+		#near = self.GetGridZ(n,near, steps)
 		
 		return near
 		
@@ -308,16 +417,17 @@ class SurfaceNet():
 						# If we haven't reached the end of the growth cycle...
 						if state < self.stateLength:
 							
-							
 							# Start my neighbours
 							if state == self.stateHalf:
 								
-								near = self.GetGridNear(i)
+								near = self.GetGridNear(i, 1)
 								
 								for n in near:
-									if self.stateList[n] == 0:
+								
+									if self.stateList[n] == 0 and not self.IsGridEnd(n):
 										if self.targetList[n] != self.currentList[n]:
 											self.stateList[n] = 1
+										
 								
 							dif = self.targetList[i] - self.currentList[i]
 							
@@ -334,8 +444,6 @@ class SurfaceNet():
 							self.stateList[i] = 0
 
 					
-
-						
 				if self.debug:
 					print('			- Growing step '+str(step))
 					step += 1
