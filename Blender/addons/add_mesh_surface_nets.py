@@ -76,6 +76,7 @@ class SurfaceNet():
 		self.gridLevel = self.gridX * self.gridY
 		self.gridRes = [self.gridX, self.gridY, self.gridZ]
 		self.gridLen = self.gridX * self.gridY * self.gridZ
+		self.gridCnt = self.gridLen / self.gridLevel
 		
 		# Make target and state values
 		self.targetList = array('f', ones_of(self.gridLen))
@@ -289,7 +290,29 @@ class SurfaceNet():
 	
 	
 	def GetGridZ(self, n, near, steps):
+	
+		if steps < 0:
 		
+			for i in range(-(steps)):
+				s = (i+1) * self.gridLevel
+				ns = n - s
+				thisLvl = math.floor(ns / self.gridLevel)
+				if thisLvl > 1.0:
+					near.append(ns)
+				else:
+					return near
+					
+		else:
+		
+			for i in range(steps):
+				s = (i+1) * self.gridLevel
+				ns = n + s
+				thisLvl = math.floor(ns / self.gridLevel)
+				if thisLvl < (self.gridCnt):
+					near.append(ns)
+				else:
+					return near
+		'''
 		nearUp = False
 		nearDown = False
 				
@@ -315,7 +338,7 @@ class SurfaceNet():
 			near += nearUp
 		if nearDown:
 			near += nearDown
-
+		'''
 		return near
 	
 	
@@ -330,8 +353,8 @@ class SurfaceNet():
 		near = self.GetGridX(n, near, steps)
 		near = self.GetGridY(n, near, -steps)
 		near = self.GetGridY(n, near, steps)
-		#near = self.GetGridZ(n,near, -steps)
-		#near = self.GetGridZ(n,near, steps)
+		near = self.GetGridZ(n,near, -steps)
+		near = self.GetGridZ(n,near, steps)
 		
 		return near
 		
@@ -461,7 +484,8 @@ class SurfaceNet():
 			# Apply the volume data to the mesh
 			self.shapeObject.data = mesh_from_data(*meshed_volume)
 			
-			bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
+			time.sleep(0.01)
+			bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=2)
 			#scene_update.go()
 		
 		
