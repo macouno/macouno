@@ -1,3 +1,8 @@
+#include <Servo.h>
+Servo myServo; // create servo object to control a servo
+int posServo = 0; // variable to store the servo position 
+
+int debug = 1;
 
 //Pin Definitions
 //The 74HC595 using a protocol called SPI (for more details http://www.arduino.cc/en/Tutorial/ShiftOut)
@@ -6,45 +11,34 @@ int data = 6;
 int clock = 8;
 int latch = 7;
 
+int lop = 0;
+
 //Used for single LED manipulation
+unsigned long nTime = millis();
 int ledState = 0;
 const int ON = HIGH;
 const int OFF = LOW;
 
 //The pin connected to the lights
-int inGreen = 2;
-int inRed1 = 3;
-int inRed2 = 4;
-int inRed3 = 5;
-int debounce = 100;
+int cntLED = 4;
+int inLED[] = {2,3,4,5,A0,A1};
+int blinkLED[] = {0,0,0,0,500,1000};
+int debounceLED = 100;
+int stateLED[] = {LOW, LOW, LOW, LOW, LOW, LOW};
+int buttonLED[5];
+int pressedLED[] = {0,0,0,0,0,0};
 
-int stateGreen = HIGH; // If the light is on or not
-int stateRed1 = HIGH;
-int stateRed2 = HIGH;
-int stateRed3 = HIGH;
-int buttonGreen; // Button state readout
-int buttonRed1;
-int buttonRed2;
-int buttonRed3;
-int pressedGreen = 0; // Remember if the button was pressed
-int pressedRed1 = 0;
-int pressedRed2 = 0;
-int pressedRed3 = 0;
+int whiteLed[] = {A0,A1};
+int whiteTime[] = {0,0};
+int whiteBlink[] = {500, 1000};
 
-long timeGreen = 0;
-long timeRed1 = 0;
-long timeRed2 = 0;
-long timeRed3 = 0;
-long debounceGreen = debounce;
-long debounceRed1 = debounce;
-long debounceRed2 = debounce;
-long debounceRed3 = debounce;
-/*
+long timeLED[] = {0,0,0,0,0,0};
+
 // THE PIEZO
 int piezoPin = 9;
 int piezoOn = 0;
 int piezoState = LOW;
-int piezoDuration = 1000;
+int piezoDuration = 500;
 int piezoTone = 1915;
 
 // PLAY A NOTE ON THE PIEZO ELEMENT
@@ -56,94 +50,102 @@ void PlayTone(int tone, int duration){
     delayMicroseconds(tone);
   }
 }
-*/
-void setup() {
-  // put your setup code here, to run once:
-  pinMode(inGreen, INPUT);
-  pinMode(outGreen, OUTPUT);
-  pinMode(inRed1, INPUT);
-  pinMode(outRed1, OUTPUT);
-  pinMode(inRed2, INPUT);
-  pinMode(outRed2, OUTPUT);
-  pinMode(inRed3, INPUT);
-  pinMode(outRed3, OUTPUT);
 
-  //pinMode(piezoPin, OUTPUT);
+void setup() {
+
+  if(debug == 1){
+    Serial.begin(9600);
+  }
+  
+  // put your setup code here, to run once:
+  for(int i = 0; i < 4; i++){
+    pinMode(inLED[i], INPUT);
+  }
+
+  pinMode(piezoPin, OUTPUT);
 
   pinMode(data, OUTPUT);
   pinMode(clock, OUTPUT);  
   pinMode(latch, OUTPUT); 
+
+  //myServo.attach(13); // attaches the servo on pin 9 to the servo object
 }
 
 void loop()
 {
 
-  /*
+  nTime = millis(); 
+  if(debug == 1){
+    Serial.print(" -\n");       // prints a label
+    Serial.print(lop);
+    lop++;
+  }
+
+  for(int i = 0; i < cntLED; i++){
+    
+    buttonLED[i] = digitalRead(inLED[i]);
+    if(debug == 1){
+      Serial.print(" - ");
+      Serial.print(buttonLED[i]);
+      Serial.print("-");
+      Serial.print(pressedLED[i]);
+      Serial.print(" ntime ");
+      Serial.print(nTime - timeLED[i]);
+    }
+    
+    if((nTime - timeLED[i]) > debounceLED){
+      if(buttonLED[i] == LOW && pressedLED[i] == 0){
+
+        if(i == 0){
+          for(int j = 0; j < 4; j++){
+            stateLED[j] = SwapState(j, stateLED[j]);    
+          }
+        
+          /*
+          posServo += 45;
+          if(posServo > 135){
+            posServo = 45;
+          }
+          myServo.write(posServo); // tell servo to go to position in variable 'pos'
+          delay(15); // waits 15ms for the servo to reach the position
+          */
+          pressedLED[i] = 1;
+          timeLED[i] = millis();
+          break;
+        }else{
+
+          if(debug == 1){
+            Serial.print(" - swap ");
+            Serial.print(i);
+          }
+          stateLED[i] = SwapState(i, stateLED[i]);
+          pressedLED[i] = 1;
+          timeLED[i] = millis();
+          break;
+        }
+      }else if(buttonLED[i] == HIGH && pressedLED[i] == 1){
+        
+        pressedLED[i] = 0;
+      }
+      
+    }
+    
+  }
+
+  // BLINK THE WHITE LED
+  for(int i = 4; i < 6; i++){
+    if((nTime - timeLED[i]) > blinkLED[i]){
+      stateLED[i] = SwapState(i, stateLED[i]);   
+      timeLED[i] = nTime;
+    }
+  }
+  
   if(piezoOn == 0){
     PlayTone(piezoTone, piezoDuration);
     piezoOn = 1;
-  }*/
-  
-  buttonGreen = digitalRead(inGreen);
-  buttonRed1 = digitalRead(inRed1);
-  buttonRed2 = digitalRead(inRed2);
-  buttonRed3 = digitalRead(inRed3);
-
-  // if the input just went from LOW and HIGH and we've waited long enough
-  // to ignore any noise on the circuit, toggle the output pin and remember
-  // the time
-  if(millis() - timeGreen > debounceGreen){
-    if(buttonGreen == LOW && pressedGreen == 0){
-      stateGreen = SwapState(0, stateGreen);
-      stateRed1 = SwapState(1, stateRed1);
-      stateRed2 = SwapState(2, stateRed2);
-      stateRed3 = SwapState(3, stateRed3);
-      pressedGreen = 1;
-      timeGreen = millis();
-      
-    }else if(buttonGreen == HIGH && pressedGreen == 1){
-      pressedGreen = 0;
-      timeGreen = millis();
-    }
-  }  
-
-  if(millis() - timeRed1 > debounceRed1){
-    if(buttonRed1 == LOW && pressedRed1 == 0){
-      stateRed1 = SwapState(1, stateRed1);
-      pressedRed1 = 1;
-      timeRed1 = millis();
-      
-    }else if(buttonRed1 == HIGH && pressedRed1 == 1){
-      pressedRed1 = 0;
-      timeRed1 = millis();
-    }
-  }
- 
-  if(millis() - timeRed2 > debounceRed2){
-    if(buttonRed2 == LOW && pressedRed2 == 0){
-      stateRed2 = SwapState(2, stateRed2);
-      pressedRed2 = 1;
-      timeRed2 = millis();
-      
-    }else if(buttonRed2 == HIGH && pressedRed2 == 1){
-      pressedRed2 = 0;
-      timeRed2 = millis();
-    }
   }
 
-
-  if(millis() - timeRed3 > debounceRed3){
-    if(buttonRed3 == LOW && pressedRed3 == 0){
-      stateRed3 = SwapState(3, stateRed3);
-      pressedRed3 = 1;
-      timeRed3 = millis();
-      
-    }else if(buttonRed3 == HIGH && pressedRed3 == 1){
-      pressedRed3 = 0;
-      timeRed3 = millis();
-    }
-  }
-
+  delay(100);
 }
 
 int SwapState(int led, int state){
@@ -164,28 +166,6 @@ void updateLEDs(int value){
   shiftOut(data, clock, MSBFIRST, value); //Shifts out the 8 bits to the shift register
   digitalWrite(latch, HIGH);   //Pulls the latch high displaying the data
 }
-
-/*
- * updateLEDsLong() - sends the LED states set in ledStates to the 74HC595
- * sequence. Same as updateLEDs except the shifting out is done in software
- * so you can see what is happening.
- */ 
-void updateLEDsLong(int value){
-  digitalWrite(latch, LOW);    //Pulls the chips latch low
-  for(int i = 0; i < 8; i++){  //Will repeat 8 times (once for each bit)
-  int bit = value & B10000000; //We use a "bitmask" to select only the eighth 
-                               //bit in our number (the one we are addressing this time through
-  value = value << 1;          //we move our number up one bit value so next time bit 7 will be
-                               //bit 8 and we will do our math on it
-  if(bit == 128){digitalWrite(data, HIGH);} //if bit 8 is set then set our data pin high
-  else{digitalWrite(data, LOW);}            //if bit 8 is unset then set the data pin low
-  digitalWrite(clock, HIGH);                //the next three lines pulse the clock pin
-  delay(1);
-  digitalWrite(clock, LOW);
-  }
-  digitalWrite(latch, HIGH);  //pulls the latch high shifting our data into being displayed
-}
-
 
 //These are used in the bitwise math that we use to change individual LEDs
 //For more details http://en.wikipedia.org/wiki/Bitwise_operation
