@@ -1,8 +1,4 @@
-#include <Servo.h>
-Servo myServo; // create servo object to control a servo
-int posServo = 0; // variable to store the servo position 
-
-int debug = 1;
+int debug = 0;
 
 //Pin Definitions
 //The 74HC595 using a protocol called SPI (for more details http://www.arduino.cc/en/Tutorial/ShiftOut)
@@ -11,7 +7,8 @@ int data = 6;
 int clock = 8;
 int latch = 7;
 
-int lop = 0;
+
+int firstLoop = 0;
 
 //Used for single LED manipulation
 unsigned long nTime = millis();
@@ -20,26 +17,33 @@ const int ON = HIGH;
 const int OFF = LOW;
 
 //The pin connected to the lights
-int cntLED = 4;
+int cntLED = 6;
 int inLED[] = {2,3,4,5,A0,A1};
-int blinkLED[] = {0,0,0,0,500,1000};
-int debounceLED = 100;
-int stateLED[] = {LOW, LOW, LOW, LOW, LOW, LOW};
+int blinkLED[] = {0,0,0,0,500,500,1000,1000};
+int debounceLED = 150;
+int stateLED[] = {LOW, LOW, LOW, LOW, HIGH, LOW, HIGH, LOW};
+int roundState = HIGH;
+int stickState = HIGH;
+int swapped = 1;
 int buttonLED[5];
-int pressedLED[] = {0,0,0,0,0,0};
+int pressedLED[] = {0,0,0,0,0,0,0,0};
 
-int whiteLed[] = {A0,A1};
-int whiteTime[] = {0,0};
-int whiteBlink[] = {500, 1000};
+long timeLED[] = {0,0,0,0,0,0,0,0};
 
-long timeLED[] = {0,0,0,0,0,0};
+// Extra LEDs
+int enableBlink = 0;
+int exOut[] = {11,12,13};
+int exState[] = {HIGH,HIGH,HIGH};
+int exGo[] = {0,0,0};
+int exLen[] = {6,6,8};
+int exTime[] = {0,0,0};
+int exBlink[] = {500,250,250};
 
 // THE PIEZO
 int piezoPin = 9;
-int piezoOn = 0;
 int piezoState = LOW;
 int piezoDuration = 500;
-int piezoTone = 1915;
+int piezoTone = 1136;
 
 // PLAY A NOTE ON THE PIEZO ELEMENT
 void PlayTone(int tone, int duration){
@@ -58,8 +62,13 @@ void setup() {
   }
   
   // put your setup code here, to run once:
-  for(int i = 0; i < 4; i++){
-    pinMode(inLED[i], INPUT);
+  // Start the buttons
+  for(int a = 0; a < 6; a++){
+    pinMode(inLED[a], INPUT);
+  }
+  // Start the extra lights
+  for(int a = 0; a < 3; a++){
+    pinMode(exOut[a], OUTPUT);
   }
 
   pinMode(piezoPin, OUTPUT);
@@ -68,92 +77,164 @@ void setup() {
   pinMode(clock, OUTPUT);  
   pinMode(latch, OUTPUT); 
 
-  //myServo.attach(13); // attaches the servo on pin 9 to the servo object
 }
 
 void loop()
 {
 
   nTime = millis(); 
-  if(debug == 1){
-    Serial.print(" -\n");       // prints a label
-    Serial.print(lop);
-    lop++;
-  }
 
-  for(int i = 0; i < cntLED; i++){
-    
-    buttonLED[i] = digitalRead(inLED[i]);
-    if(debug == 1){
-      Serial.print(" - ");
-      Serial.print(buttonLED[i]);
-      Serial.print("-");
-      Serial.print(pressedLED[i]);
-      Serial.print(" ntime ");
-      Serial.print(nTime - timeLED[i]);
+  // SET ALL LEDS TO WHAT THEY SHOULD BE
+  if(swapped == 1){
+    for(int b = 0; b < 8; b++){
+      changeLED(b, stateLED[b]);
     }
-    
-    if((nTime - timeLED[i]) > debounceLED){
-      if(buttonLED[i] == LOW && pressedLED[i] == 0){
-
-        if(i == 0){
-          for(int j = 0; j < 4; j++){
-            stateLED[j] = SwapState(j, stateLED[j]);    
-          }
-        
-          /*
-          posServo += 45;
-          if(posServo > 135){
-            posServo = 45;
-          }
-          myServo.write(posServo); // tell servo to go to position in variable 'pos'
-          delay(15); // waits 15ms for the servo to reach the position
-          */
-          pressedLED[i] = 1;
-          timeLED[i] = millis();
-          break;
-        }else{
-
-          if(debug == 1){
-            Serial.print(" - swap ");
-            Serial.print(i);
-          }
-          stateLED[i] = SwapState(i, stateLED[i]);
-          pressedLED[i] = 1;
-          timeLED[i] = millis();
-          break;
-        }
-      }else if(buttonLED[i] == HIGH && pressedLED[i] == 1){
-        
-        pressedLED[i] = 0;
-      }
-      
-    }
-    
-  }
-
-  // BLINK THE WHITE LED
-  for(int i = 4; i < 6; i++){
-    if((nTime - timeLED[i]) > blinkLED[i]){
-      stateLED[i] = SwapState(i, stateLED[i]);   
-      timeLED[i] = nTime;
-    }
+    swapped = 0;
   }
   
-  if(piezoOn == 0){
+  if(firstLoop == 0){
+    
+    for(int a = 0; a < 3; a++){
+      digitalWrite(exOut[a], exState[a]);
+    }
+
+    stickState = digitalRead(inLED[4]);
+    roundState = digitalRead(inLED[5]);
+
     PlayTone(piezoTone, piezoDuration);
-    piezoOn = 1;
+    
+    firstLoop = 1;
+    
+  }else{
+
+    for(int i = 0; i < cntLED; i++){ 
+      buttonLED[i] = digitalRead(inLED[i]);
+    }
+  
+    for(int i = 0; i < cntLED; i++){
+      
+      if(i < 4){
+        if((nTime - timeLED[i]) > debounceLED){
+          if(buttonLED[i] == LOW && pressedLED[i] == 0){
+  
+            if(debug == 1){
+              Serial.print("\n - pressed ");
+              Serial.print(i);
+            }
+            pressedLED[i] = 1;
+            timeLED[i] = nTime;
+            swapped = 1;
+            
+            if(i == 0){
+              for(int j = 0; j < 4; j++){
+                stateLED[j] = SwapState(j, stateLED[j]);
+              }
+              break;
+            }else{
+              stateLED[i] = SwapState(i, stateLED[i]);
+
+              // Start some blinking in certain cases
+              if(i == 1 && exGo[2] == 0 && buttonLED[4] == HIGH && buttonLED[5] == HIGH){
+                exGo[2] = 1;
+                exTime[2] = nTime;
+                //PlayTone(1136, 500);
+              }else if(i == 2 && exGo[1] == 0 && buttonLED[4] == LOW && buttonLED[5] == LOW){
+                exGo[1] = 1;
+                exTime[1] = nTime;
+              }else if(i == 3 && exGo[0] == 0 && buttonLED[4] == HIGH && buttonLED[5] == LOW){
+                exGo[0] = 1;
+                exTime[0] = nTime;
+              }
+              break;
+            }
+          }else if(buttonLED[i] == HIGH && pressedLED[i] == 1){
+            
+            pressedLED[i] = 0;
+          }
+          
+        }
+     
+      // SWAP THE WHITE LIGHTS
+      }else if(i == 4){
+        int k = i + 1;
+        if((buttonLED[i] == LOW && stateLED[i] == LOW) || (buttonLED[i] == HIGH && stateLED[i] == HIGH)){
+          stateLED[i] = SwapState(i, stateLED[i]);
+          stateLED[k] = SwapState(k, stateLED[k]);
+
+          // If the round button is pressed then also swap them!
+          if(buttonLED[5] == LOW){
+            int l = i+2;
+            int m = l+1;
+            stateLED[l] = SwapState(l, stateLED[l]);
+            stateLED[m] = SwapState(m, stateLED[m]);            
+          }
+          swapped = 1;
+          break;
+        }
+      
+      // SWAP THE BLUE AND ORANGE
+      }else if(i == 5){
+        int l = i+1;
+        int m = l+1;
+        if(buttonLED[i] != roundState){
+          stateLED[l] = SwapState(l, stateLED[l]);
+          stateLED[m] = SwapState(m, stateLED[m]);
+          swapped = 1;  
+          roundState = buttonLED[i];
+
+          // Lets blink the string!
+          if(buttonLED[4] == LOW && exGo[0] == 0){
+            exGo[0]= 1;
+            exTime[0] = nTime;
+          }
+          
+          break;  
+        }
+      }
+     
+    }
+
+    // Blinking lights
+    if(enableBlink == 1){
+      for(int a = 0; a < 3; a++){
+        if(exGo[a] > 0){
+          if((nTime - exTime[a]) > exBlink[a]){
+            if(exState[a] == HIGH){
+              exState[a] = LOW;
+            }else{
+              exState[a] = HIGH;
+            }
+            exTime[a] = nTime;
+            exGo[a]++;
+            digitalWrite(exOut[a], exState[a]);
+          }
+          if(exGo[a] >= exLen[a]){
+             exGo[a] = 0;
+             if(exState[a] == LOW){
+               exState[a] = HIGH;
+               digitalWrite(exOut[a], exState[a]);
+             }
+          }
+        }
+      }
+    }
   }
 
   delay(100);
 }
 
 int SwapState(int led, int state){
+  if(debug == 1){
+    Serial.print(" - set ");
+    Serial.print(led);
+    Serial.print(" to ");
+    Serial.print(state);
+  }
   if(state == HIGH){
-    changeLED(led, 0);
+    //changeLED(led, 0);
     return LOW;
   }
-  changeLED(led, 1);
+  //changeLED(led, 1);
   return HIGH;
 }
 
