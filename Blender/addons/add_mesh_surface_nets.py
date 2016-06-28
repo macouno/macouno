@@ -39,7 +39,26 @@ from macouno.surface_nets import *
 
 Volume = namedtuple("Volume", "data dimms")
 
+def SNet_Add(context, debug):
 
+	# Make a new mesh and object for the surface
+	me = bpy.data.meshes.new("Surface")
+	ob = bpy.data.objects.new('Surface', me)
+	
+	scn = context.scene
+	scn.objects.link(ob)
+	
+	ob.select = True
+	scn.objects.active = ob
+	
+	# Make some variables for the object
+	ob.SNet_enabled = True
+	ob['SNet_debug'] = debug
+	ob['SNet_growSpeed'] = 0.05
+	ob['SNet_stateLength'] = 100
+	
+	ob['SNet_gridSize'] = mathutils.Vector((10.0,10.0,10.0))
+	
 
 class SurfaceNet():
 
@@ -530,7 +549,8 @@ class OpAddSurfaceNet(bpy.types.Operator):
 	debug = BoolProperty(name='Debug', description='Get timing info in the console', default=True)
 
 	def execute(self, context):
-		Net = SurfaceNet(context, self.debug, self.useCoords, self.showGrowth);
+		SNet_Add(context, self.debug)
+		#Net = SurfaceNet(context, self.debug, self.useCoords, self.showGrowth);
 		return {'FINISHED'}
 
 

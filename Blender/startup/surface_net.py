@@ -9,7 +9,7 @@ def SNet_Update(context):
 	#scn = context.scene
 	
 	for ob in context.objects:
-		if ob.SNet_enabled:
+		if ob.SNet_enabled ands ob.location[0] < 10.0:
 			ob.location[0] += 0.01
 
 
