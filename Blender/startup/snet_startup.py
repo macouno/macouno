@@ -1,7 +1,8 @@
 import bpy, sys, mathutils, math, random
 from bpy.app.handlers import persistent
 from bpy.props import EnumProperty, IntProperty
-
+from macouno.surface_nets import *
+	
 	
 @persistent
 def SNet_Update(context):
@@ -9,7 +10,7 @@ def SNet_Update(context):
 	#scn = context.scene
 	
 	for ob in context.objects:
-		if ob.SNet_enabled ands ob.location[0] < 10.0:
+		if ob.SNet_enabled and ob.location[0] < 10.0:
 			ob.location[0] += 0.01
 
 

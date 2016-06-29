@@ -39,7 +39,32 @@ from macouno.surface_nets import *
 
 Volume = namedtuple("Volume", "data dimms")
 
-def SNet_Add(context, debug):
+
+# Make coordinates for every point in the volume (not needed if you use GetLocation
+def SNet_MakeCoords(len, res):
+	coords = []
+	
+	# Make a coordinate for every point in the volume
+	x = y = z = 0
+	for i in range(len):
+		
+		coords.append(mathutils.Vector((x, y, z)))
+
+		# Go up a level if you move beyond the x or y resolution
+		x += 1
+		if x == res[0]:
+			x = 0
+			y += 1
+		if y == res[1]:
+			y = 0
+			z += 1
+
+	return coords
+	
+	
+
+# Set up the object!
+def SNet_Add(context, debug, gridSize, showGrowth, useCoords):
 
 	# Make a new mesh and object for the surface
 	me = bpy.data.meshes.new("Surface")
@@ -48,18 +73,46 @@ def SNet_Add(context, debug):
 	scn = context.scene
 	scn.objects.link(ob)
 	
-	ob.select = True
-	scn.objects.active = ob
-	
 	# Make some variables for the object
 	ob.SNet_enabled = True
+	
 	ob['SNet_debug'] = debug
+	ob['SNet_showGrowth'] = showGrowth
+	ob['SNet_useCoords'] = useCoords
 	ob['SNet_growSpeed'] = 0.05
 	ob['SNet_stateLength'] = 100
 	
-	ob['SNet_gridSize'] = mathutils.Vector((10.0,10.0,10.0))
+	ob['SNet_gridSize'] = mathutils.Vector((gridSize,gridSize,gridSize))
+	ob['SNet_gridX'] = gridSize
+	ob['SNet_gridY'] = gridSize
+	ob['SNet_gridZ'] = gridSize
+	ob['SNet_gridRes'] = [ob['SNet_gridX'], ob['SNet_gridY'], ob['SNet_gridZ']]
+	ob['SNet_gridLen'] = ob['SNet_gridX'] * ob['SNet_gridY'] * ob['SNet_gridZ']
 	
+	# Make target and state values
+	ob['SNet_targetList'] = array('f', ones_of(gridSize))
+	ob['SNet_currentList'] = array('f', ones_of(gridSize))
+	ob['SNet_stateList'] = array('f', zeros_of(gridSize))
+	
+	# let's get the location of the 3d cursor
+	curLoc = scn.cursor_location
+	
+	 # Make a list of all coordinates
+	if useCoords:
+		if debug:
+			print('		- Generating list of coordinates')
 
+		ob['SNet_coords'] = SNet_MakeCoords(ob['SNet_gridLen'], ob['SNet_gridRes'])
+	elif debug:
+		print('		- Calculating coordinates live')
+
+	# Select the object
+	ob.select = True
+	scn.objects.active = ob
+	
+	
+		
+# OLD CLASS SHOULD NOT BE USED
 class SurfaceNet():
 
 	# Initialise the class
@@ -546,10 +599,12 @@ class OpAddSurfaceNet(bpy.types.Operator):
 	
 	useCoords = BoolProperty(name='Use Coordinate List', description='Use a list of coordinates in stead of calculating every position', default=False)
 	
+	gridSize = IntProperty(name='Grid Size', default=10, min=0, max=100, soft_min=0, soft_max=1000)
+	
 	debug = BoolProperty(name='Debug', description='Get timing info in the console', default=True)
 
 	def execute(self, context):
-		SNet_Add(context, self.debug)
+		SNet_Add(context, self.debug, self.gridSize, self.showGrowth, self.useCoords)
 		#Net = SurfaceNet(context, self.debug, self.useCoords, self.showGrowth);
 		return {'FINISHED'}
 
