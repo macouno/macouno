@@ -33,33 +33,13 @@ bl_info = {
 
 import bpy, mathutils, math, time
 from copy import copy
+from collections import namedtuple
 from bpy.props import IntProperty, EnumProperty, FloatVectorProperty, FloatProperty, BoolProperty
 from macouno import bmesh_extras, scene_update
-from macouno.surface_nets import *
+from macouno.snet_core import *
+from macouno.snet_utils import *
 
 Volume = namedtuple("Volume", "data dimms")
-
-
-# Make coordinates for every point in the volume (not needed if you use GetLocation
-def SNet_MakeCoords(len, res):
-	coords = []
-	
-	# Make a coordinate for every point in the volume
-	x = y = z = 0
-	for i in range(len):
-		
-		coords.append(mathutils.Vector((x, y, z)))
-
-		# Go up a level if you move beyond the x or y resolution
-		x += 1
-		if x == res[0]:
-			x = 0
-			y += 1
-		if y == res[1]:
-			y = 0
-			z += 1
-
-	return coords
 	
 	
 
