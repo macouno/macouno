@@ -33,6 +33,7 @@ bl_info = {
 
 import bpy, mathutils, math, time
 from copy import copy
+from bpy.app.handlers import persistent
 from collections import namedtuple
 from bpy.props import IntProperty, EnumProperty, FloatVectorProperty, FloatProperty, BoolProperty
 from macouno import bmesh_extras, scene_update
@@ -41,7 +42,24 @@ from macouno.snet_utils import *
 
 Volume = namedtuple("Volume", "data dimms")
 	
+@persistent
+def SNet_Update(context):
 	
+	#scn = context.scene
+	
+	for ob in context.objects:
+		if ob.SNet_enabled and ob.location[0] < 10.0:
+			ob.location[0] += 0.01
+			
+			
+			
+def SNet_Set(self, value):
+	if self.SNet_enabled:
+		print('Enabling Surface Net')
+	else:
+		print('Disabling Surface Net')
+		
+		
 
 # Set up the object!
 def SNet_Add(context, debug, gridSize, showGrowth, useCoords):
@@ -596,11 +614,22 @@ def menu_func(self, context):
 def register():
 	bpy.utils.register_module(__name__)
 	bpy.types.INFO_MT_mesh_add.append(menu_func)
+	
+	# Is this object a net?
+	bpy.types.Object.SNet_enabled = bpy.props.BoolProperty(default=False, name="Enable Surface Net", update=SNet_Set)
+	
+	# Add an app handler
+	bpy.app.handlers.scene_update_pre.append(SNet_Update)
 
 
 def unregister():
 	bpy.utils.unregister_module(__name__)
 	bpy.types.INFO_MT_mesh_add.remove(menu_func)
+	
+	del bpy.types.Object.SNet_enabled
+	
+	bpy.app.handlers.scene_update_pre.remove(SNet_Update)
+	
 
 if __name__ == "__main__":
 	register()
