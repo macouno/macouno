@@ -92,6 +92,10 @@ def SNet_Add(context, debug, gridSize, showGrowth, useCoords):
 	ob['SNet_currentList'] = array('f', ones_of(gridSize))
 	ob['SNet_stateList'] = array('f', zeros_of(gridSize))
 	
+	# The max and min values for our grid
+	ob['SNet_limitMax'] = 1.0
+	ob['SNet_limitMin'] = -1.0
+	
 	# let's get the location of the 3d cursor
 	curLoc = scn.cursor_location
 	
@@ -99,11 +103,14 @@ def SNet_Add(context, debug, gridSize, showGrowth, useCoords):
 	if useCoords:
 		if debug:
 			print('		- Generating list of coordinates')
-
 		ob['SNet_coords'] = SNet_MakeCoords(ob['SNet_gridLen'], ob['SNet_gridRes'])
 	elif debug:
-		print('		- Calculating coordinates live')
+		ob['SNet_coords'] = []
+		if debug:
+			print('		- Calculating coordinates live')
 
+	ob['SNet_targetList'] = SNet_MakeBall(ob['SNet_stateList'], ob['SNet_targetList'], ob['SNet_gridX'], ob['SNet_gridY'], ob['SNet_gridZ'], ob['SNet_gridLen'], ob['SNet_limitMax'], ob['SNet_limitMin'], ob['SNet_coords'], ob['SNet_useCoords'])
+		
 	# Select the object
 	ob.select = True
 	scn.objects.active = ob
@@ -171,7 +178,7 @@ class SurfaceNet():
 		if useCoords:
 			if self.debug:
 				print('		- Generating list of coordinates')
-			self.coords = self.MakeCoords(self.gridLen, self.gridRes)
+			self.coords = SNet_MakeCoords(self.gridLen, self.gridRes)
 		elif self.debug:
 			print('		- Calculating coordinates live')
 		
@@ -194,284 +201,19 @@ class SurfaceNet():
 			print('\n	--- FINISHED SURFACE NET ---\n')
 			
 		return
+	
+	
+		
+
+	
+	
+	
+
+	
+		
+		
 
 		
-		
-	# Make a sphere in the middle of the grid
-	def MakeBall(self):
-	
-		# Let's make a ball within a certain distance from the middle
-		middle = mathutils.Vector((self.gridX*0.5,self.gridY*0.5,self.gridZ*0.5))
-		
-		for i in range(self.gridLen):
-		
-			distV = middle - self.GetCoord(i)
-			dist = distV.length
-			
-			val = self.LimitValue(round(dist - 5, 2))
-			
-			if dist < 0.1:
-				
-				# SET A STATE!
-				print("STARTING POINT")
-				self.stateList[i] = 1
-			
-			if val != self.limitMax:
-			
-				#self.stateList[i] = 1.0
-				self.targetList[i] = val
-				
-				
-		
-	def MakeStick(self):
-	
-		# Let's make a ball within a certain distance from the middle
-		middle = mathutils.Vector((self.gridX*0.5,self.gridY*0.5,self.gridZ*0.5))
-		
-		m = self.GetGridMiddle()
-		self.stateList[m] = 1
-		self.targetList[m] = -1
-		
-		near = []
-		near = self.GetGridX(m, near, 10)
-		
-		for n in near:
-			self.targetList[n] = -1
-	
-	
-		
-	# Get the midpoint of the grid
-	def GetGridMiddle(self):
-	
-		xLoc = round(self.gridX*0.5)
-		yLoc = math.floor(self.gridY*0.5)
-		zLoc = math.floor(self.gridZ*0.5)
-		
-		zDist = self.gridLevel * zLoc
-		yDist = self.gridX * yLoc
-		
-		return xLoc + zDist + yDist
-	
-	
-	
-	# Check to see if n is on the border of 
-	def IsGridEnd(self, n):
-	
-		# At the bottom level
-		if n < (self.gridLevel-1):
-			return True
-			
-		# At the top level
-		elif n > ((self.gridLen-self.gridLevel)-1):
-			return True
-			
-		# Find the position at this level
-		lvlPos = n % self.gridLevel
-		
-		# Now find the position in the gridY
-		xPos = lvlPos % self.gridY
-		
-		if xPos <= 0 or xPos >= (self.gridX-1):
-			return True
-		
-		yPos = lvlPos - xPos
-		if yPos > 0:
-			yPos = self.gridLevel / yPos
-		
-		if yPos <= 0 or yPos >= (self.gridY-1):
-			return True
-		
-		return False
-	
-		
-		
-	# Get the next and previous items on one axis
-	def GetGridX(self, n, near, steps):
-
-		if steps < 0:
-			for i in range(-(steps)):
-				s = i+1
-				ns = n-s
-				# Haal de volgende op als deze niet aan het begin zit
-				if ns > 1 and (ns % self.gridX) > 1:
-					near.append(ns)
-				else:
-					return near
-					
-		else:
-			
-			for i in range(steps):
-				ns = (n+1)+i
-				# Get the next point if we're not at the end
-				if ns % self.gridX:
-					near.append(ns)
-				else:
-					return near
-
-		return near
-
-		
-		
-	# Find the points on the next level
-	def GetGridY(self, n, near, steps):
-	
-		if steps < 0:
-		
-			for i in range(-(steps)):
-				s = (i+1) * self.gridX
-				ns = n - s
-				# We want to know the placing on the current level!
-				thisLvl = ns % self.gridLevel
-				if thisLvl >= self.gridX:
-					near.append(ns)
-				else:
-					return near
-					
-		else:
-		
-			for i in range(steps):
-				s = (i+1) * self.gridX
-				ns = n + s
-				thisLvl = ns % self.gridLevel
-				if thisLvl < (self.gridLevel - self.gridX):
-					near.append(ns)
-				else:
-					return near
-			
-
-		'''
-		# Add the previous row
-		Np = n - self.gridX
-		if Np > 0 :
-			near.append(Np)
-			near = self.GetGridX(Np, near, -steps)
-			near = self.GetGridX(Np, near, steps)
-		
-		# Add the next row
-		Np = n + self.gridX
-		if Np < (self.gridLen-1):
-			near.append(Np)
-
-			near = self.GetGridX(Np, near, -steps)
-			near = self.GetGridX(Np, near, steps)
-		'''
-		return near
-		
-	
-	
-	def GetGridZ(self, n, near, steps):
-	
-		if steps < 0:
-		
-			for i in range(-(steps)):
-				s = (i+1) * self.gridLevel
-				ns = n - s
-				thisLvl = math.floor(ns / self.gridLevel)
-				if thisLvl > 1.0:
-					near.append(ns)
-				else:
-					return near
-					
-		else:
-		
-			for i in range(steps):
-				s = (i+1) * self.gridLevel
-				ns = n + s
-				thisLvl = math.floor(ns / self.gridLevel)
-				if thisLvl < (self.gridCnt):
-					near.append(ns)
-				else:
-					return near
-		'''
-		nearUp = False
-		nearDown = False
-				
-		# Get the items a level up from current
-		if n > 0 and n < ((self.gridLen - (self.gridLevel*2))-1) :
-		
-			nearUp = copy(near)	
-			for i,m in enumerate(nearUp) :
-				nearUp[i] += self.gridLevel
-				
-			nearUp.append(n + self.gridLevel)
-			
-			
-		# Get the items a down from current
-		if False and n > (self.gridLevel*2)-1: 
-			
-			nearDown = copy(near)
-			for i,m in enumerate(nearDown):
-				nearDown[i] -= self.gridLevel
-			nearDown.append(n - self.gridLevel)
-			
-		if nearUp:
-			near += nearUp
-		if nearDown:
-			near += nearDown
-		'''
-		return near
-	
-	
-		
-	# Get all adjacent points
-	def GetGridNear(self, n, steps):
-		
-		near = []
-
-		# Get the next items on this level
-		near = self.GetGridX(n, near, -steps)
-		near = self.GetGridX(n, near, steps)
-		near = self.GetGridY(n, near, -steps)
-		near = self.GetGridY(n, near, steps)
-		near = self.GetGridZ(n,near, -steps)
-		near = self.GetGridZ(n,near, steps)
-		
-		return near
-		
-		
-		
-	# Get the coord for this point
-	def GetCoord(self, n):
-
-		if self.useCoords:
-			return self.coords[n]
-		
-		return self.GetLocation(n)
-		
-		
-		
-	# Limit a value to a global max and minimum
-	def LimitValue(self, n):
-		if n > self.limitMax:
-			return self.limitMax
-		elif n < self.limitMin:
-			return self.limitMin
-		return n
-		
-		
-		
-		
-	# Get the location at a specific position in the grid
-	def GetLocation(self, position):
-
-		res = self.gridRes
-		
-		xRes = res[1]
-
-		# The total nr of positions per layer
-		layer = res[0] * xRes
-		
-		# The relative position on the final z layer
-		xyRes = position % layer
-		
-		# The z position
-		z = (position - xyRes) / layer
-		
-		x = xyRes % xRes
-		
-		y = (xyRes - x) / xRes
-		
-		return mathutils.Vector((x,y,z))
 		
 		
 		
@@ -557,32 +299,6 @@ class SurfaceNet():
 			time.sleep(0.01)
 			bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=2)
 			#scene_update.go()
-		
-		
-		
-
-		
-	# Make coordinates for every point in the volume (not needed if you use GetLocation
-	def MakeCoords(self, len, res):
-
-		coords = []
-		
-		# Make a coordinate for every point in the volume
-		x = y = z = 0
-		for i in range(len):
-			
-			coords.append(mathutils.Vector((x, y, z)))
-
-			# Go up a level if you move beyond the x or y resolution
-			x += 1
-			if x == res[0]:
-				x = 0
-				y += 1
-			if y == res[1]:
-				y = 0
-				z += 1
-
-		return coords
 
 		
 		
@@ -595,7 +311,7 @@ class OpAddSurfaceNet(bpy.types.Operator):
 	
 	showGrowth = BoolProperty(name='Show Growth', description='Update the scene to show the growth of the form (takes more time and memory)', default=True)
 	
-	useCoords = BoolProperty(name='Use Coordinate List', description='Use a list of coordinates in stead of calculating every position', default=False)
+	useCoords = BoolProperty(name='Use Coordinate List', description='Use a list of coordinates in stead of calculating every position', default=True)
 	
 	gridSize = IntProperty(name='Grid Size', default=10, min=0, max=100, soft_min=0, soft_max=1000)
 	
