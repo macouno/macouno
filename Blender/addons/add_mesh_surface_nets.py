@@ -144,7 +144,7 @@ class OpAddSurfaceNet(bpy.types.Operator):
 	bl_label = "Add Surface Net"
 	bl_options = {"REGISTER", "UNDO"}
 	
-	showGrowth = BoolProperty(name='Show Growth', description='Update the scene to show the growth of the form (takes more time and memory)', default=False)
+	showGrowth = BoolProperty(name='Show Growth', description='Update the scene to show the growth of the form (takes more time and memory)', default=True)
 	
 	useCoords = BoolProperty(name='Use Coordinate List', description='Use a list of coordinates in stead of calculating every position', default=True)
 	

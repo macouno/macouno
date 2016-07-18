@@ -3,7 +3,7 @@ UTILITIES
 
 For use in combination with the snet_core
 '''
-import mathutils, bpy
+import mathutils, bpy, math
 from copy import copy
 from macouno.snet_core import *
 
@@ -123,8 +123,8 @@ def SNet_MakeBall(stateList, targetList, gridX, gridY, gridZ, gridLevel, gridLen
 			
 			val = round((dist -3.0), 2)
 			
-			if dist < 0.1:
-				#val = -1.0
+			if dist < 1.0:
+				val = -1.0
 				# SET A STATE!
 				print("STARTING POINT",i)
 				stateList[i] = 1
@@ -259,7 +259,7 @@ def SNet_GetGridZ(n, near, steps, gridLevel, gridCnt):
 	else:
 	
 		for i in range(steps):
-			s = (i+1) * self.gridLevel
+			s = (i+1) * gridLevel
 			ns = n + s
 			thisLvl = math.floor(ns / gridLevel)
 			if thisLvl < (gridCnt):
@@ -365,7 +365,7 @@ def SNet_GrowStep(ob):
 def SNet_ApplyShape(shapeObject, gridRes, currentList):
 
 	mesher = SurfaceNetMesher()
-	
+	'''
 	dot = Volume(data=array('f', [
 	
 	1.0, 1.0, 1.0, 1.0,
@@ -392,9 +392,7 @@ def SNet_ApplyShape(shapeObject, gridRes, currentList):
 	
 	dot = create_torus()
 	dot = create_sphere()
-	
-	print(dot)
-	
+	'''
 	# Create the meshed volume
 	meshed_volume = mesher.mesh_volume(*Volume(dimms = gridRes, data = currentList))
 	#meshed_volume = mesher.mesh_volume(*dot)
