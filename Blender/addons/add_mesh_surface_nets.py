@@ -42,14 +42,28 @@ from macouno.snet_utils import *
 
 Volume = namedtuple("Volume", "data dimms")
 	
+	
+	
 @persistent
 def SNet_Update(context):
 	
 	#scn = context.scene
 	
 	for ob in context.objects:
-		if ob.SNet_enabled and ob.location[0] < 10.0:
-			ob.location[0] += 0.01
+		if ob.SNet_enabled:
+			try:
+				if ob['SNet_growing']:
+					growing = True
+				else:
+					growing = False
+			except:
+					growing = False
+				
+			if growing:
+				SNet_GrowStep(ob)
+		
+			#if ob.location[0] < 10.0:
+			#	ob.location[0] += 0.01
 			
 			
 			
@@ -79,17 +93,21 @@ def SNet_Add(context, debug, gridSize, showGrowth, useCoords):
 	ob['SNet_useCoords'] = useCoords
 	ob['SNet_growSpeed'] = 0.05
 	ob['SNet_stateLength'] = 100
+	ob['SNet_stateHalf'] = round(ob['SNet_stateLength'] * 0.5)
 	
 	ob['SNet_gridSize'] = mathutils.Vector((gridSize,gridSize,gridSize))
 	ob['SNet_gridX'] = gridSize
 	ob['SNet_gridY'] = gridSize
 	ob['SNet_gridZ'] = gridSize
+	ob['SNet_gridLevel'] = ob['SNet_gridX'] * ob['SNet_gridY']
+	ob['SNet_gridLen'] = ob['SNet_gridLevel'] * ob['SNet_gridZ']
+	ob['SNet_gridCnt'] = ob['SNet_gridLen'] / ob['SNet_gridLevel']
 	ob['SNet_gridRes'] = [ob['SNet_gridX'], ob['SNet_gridY'], ob['SNet_gridZ']]
-	ob['SNet_gridLen'] = ob['SNet_gridX'] * ob['SNet_gridY'] * ob['SNet_gridZ']
+	
 	
 	# Make target and state values
 	ob['SNet_targetList'] = array('f', ones_of(ob['SNet_gridLen']))
-	ob['SNet_currentList'] = array('f', ones_of(ob['SNet_gridLen']))
+	ob['SNet_currentList'] = [t for t in ob['SNet_targetList']]
 	ob['SNet_stateList'] = array('f', zeros_of(ob['SNet_gridLen']))
 	
 	# The max and min values for our grid
@@ -109,98 +127,14 @@ def SNet_Add(context, debug, gridSize, showGrowth, useCoords):
 		if debug:
 			print('		- Calculating coordinates live')
 
-	ob['SNet_targetList'] = SNet_MakeBall(ob['SNet_stateList'], ob['SNet_targetList'], ob['SNet_gridX'], ob['SNet_gridY'], ob['SNet_gridZ'], ob['SNet_gridLen'], ob['SNet_limitMax'], ob['SNet_limitMin'], ob['SNet_gridRes'], ob['SNet_coords'], ob['SNet_useCoords'])
-		
+	ob['SNet_targetList'] = SNet_MakeBall(ob['SNet_stateList'], ob['SNet_targetList'], ob['SNet_gridX'], ob['SNet_gridY'], ob['SNet_gridZ'], ob['SNet_gridLevel'], ob['SNet_gridLen'], ob['SNet_limitMax'], ob['SNet_limitMin'], ob['SNet_gridRes'], ob['SNet_coords'], ob['SNet_useCoords'])
+	
+	ob['SNet_growing'] = True
+	
 	# Select the object
 	ob.select = True
 	scn.objects.active = ob
 		
-		
-		
-		
-	# Let's show the growth of our shape!
-	def GrowShape(self):
-	
-		# Do not grow but apply the new shape immediately
-		if not self.showGrowth:
-			self.currentList = copy(self.targetList)
-			self.ApplyShape()
-			
-		else:
-		
-			self.growing = True
-			
-			if self.debug:
-				print('		- Starting growthspurt')
-				step = 1
-		
-			# Keep updating the mesh as long as we're growing
-			while self.growing:
-					
-				self.growing = False
-				
-				for i, target in enumerate(self.targetList):
-				
-					state = self.stateList[i]
-					
-					# If this location is growing... we know what to do!
-					if state > 0:
-						
-						# Keep growing!
-						if not self.growing:
-							self.growing = True
-						
-						# If we haven't reached the end of the growth cycle...
-						if state < self.stateLength:
-							
-							# Start my neighbours
-							if state == self.stateHalf:
-								
-								near = self.GetGridNear(i, 1)
-								
-								for n in near:
-								
-									if self.stateList[n] == 0 and not self.IsGridEnd(n):
-										if self.targetList[n] != self.currentList[n]:
-											self.stateList[n] = 1
-										
-								
-							dif = self.targetList[i] - self.currentList[i]
-							
-							dif /= (self.stateLength - state)
-							
-							self.currentList[i] += dif
-							
-							self.stateList[i] = state + 1
-							
-						# If the state has reached its maximum we are done growing
-						else:
-							
-							self.currentList[i] = self.targetList[i]
-							self.stateList[i] = 0
-
-					
-				if self.debug:
-					print('			- Growing step '+str(step))
-					step += 1
-					
-				self.ApplyShape()
-
-		
-		
-		
-	def ApplyShape(self):
-	
-			# Create the meshed volume
-			meshed_volume = self.mesher.mesh_volume(*Volume(dimms = self.gridRes, data = self.currentList))
-			
-			# Apply the volume data to the mesh
-			self.shapeObject.data = mesh_from_data(*meshed_volume)
-			
-			time.sleep(0.01)
-			bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=2)
-			#scene_update.go()
-
 		
 		
 
@@ -210,7 +144,7 @@ class OpAddSurfaceNet(bpy.types.Operator):
 	bl_label = "Add Surface Net"
 	bl_options = {"REGISTER", "UNDO"}
 	
-	showGrowth = BoolProperty(name='Show Growth', description='Update the scene to show the growth of the form (takes more time and memory)', default=True)
+	showGrowth = BoolProperty(name='Show Growth', description='Update the scene to show the growth of the form (takes more time and memory)', default=False)
 	
 	useCoords = BoolProperty(name='Use Coordinate List', description='Use a list of coordinates in stead of calculating every position', default=True)
 	
