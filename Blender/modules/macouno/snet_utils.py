@@ -117,15 +117,11 @@ def SNet_MakeBall(stateList, targetList, gridX, gridY, gridZ, gridLevel, gridLen
 	for i in range(gridLen):
 	
 		if not SNet_IsGridEnd(i, gridX, gridY, gridLevel, gridLen, gridRes):
-			
-			#val = -1.0
 	
 			distV = middle - SNet_GetCoord(i, gridRes, useCoords, coords)
 			dist = distV.length
 			
 			val = round((dist -3.0), 2)
-			if val < 1.0:
-				val = -1.0
 			
 			if dist < 0.1:
 				#val = -1.0
