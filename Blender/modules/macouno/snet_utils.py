@@ -16,7 +16,8 @@ def SNet_MakeCoords(len, res):
 	x = y = z = 0
 	for i in range(len):
 		
-		coords.append(mathutils.Vector((x, y, z)))
+		# Should not be a vector yet... we'll do that when retrieving
+		coords.append((x, y, z))
 
 		# Go up a level if you move beyond the x or y resolution
 		x += 1
@@ -85,15 +86,6 @@ def SNet_GetLocation(position, gridRes):
 	
 	
 
-def SNet_GetCoord(n, coords, useCoords):
-
-	if useCoords:
-		return coords[n]
-	
-	return SNet_GetLocation(n)
-	
-	
-
 # Make coordinates for every point in the volume (not needed if you use GetLocation
 def SNet_MakeCoords(len, res):
 	coords = []
@@ -128,14 +120,14 @@ def SNet_LimitValue(n, limitMax, limitMin):
 	
 	
 # Make a sphere in the middle of the grid
-def SNet_MakeBall(stateList, targetList, gridX, gridY, gridZ, gridLen, limitMax, limitMin, coords, useCoords):
+def SNet_MakeBall(stateList, targetList, gridX, gridY, gridZ, gridLen, limitMax, limitMin, gridRes, coords, useCoords):
 
 	# Let's make a ball within a certain distance from the middle
 	middle = mathutils.Vector((gridX*0.5,gridY*0.5,gridZ*0.5))
 	
 	for i in range(gridLen):
 	
-		distV = middle - SNet_GetCoord(i, coords, useCoords)
+		distV = middle - SNet_GetCoord(i, gridRes, useCoords, coords)
 		dist = distV.length
 		
 		val = SNet_LimitValue(round(dist - 5, 2), limitMax, limitMin)
@@ -217,7 +209,7 @@ def SNet_GetLocation(position, gridRes):
 def SNet_GetCoord(n, gridRes, useCoords, coords):
 
 	if useCoords:
-		return coords[n]
+		return mathutils.Vector(coords[n])
 	
 	return SNet_GetLocation(n, gridRes)
 	

@@ -88,9 +88,9 @@ def SNet_Add(context, debug, gridSize, showGrowth, useCoords):
 	ob['SNet_gridLen'] = ob['SNet_gridX'] * ob['SNet_gridY'] * ob['SNet_gridZ']
 	
 	# Make target and state values
-	ob['SNet_targetList'] = array('f', ones_of(gridSize))
-	ob['SNet_currentList'] = array('f', ones_of(gridSize))
-	ob['SNet_stateList'] = array('f', zeros_of(gridSize))
+	ob['SNet_targetList'] = array('f', ones_of(ob['SNet_gridLen']))
+	ob['SNet_currentList'] = array('f', ones_of(ob['SNet_gridLen']))
+	ob['SNet_stateList'] = array('f', zeros_of(ob['SNet_gridLen']))
 	
 	# The max and min values for our grid
 	ob['SNet_limitMax'] = 1.0
@@ -109,110 +109,11 @@ def SNet_Add(context, debug, gridSize, showGrowth, useCoords):
 		if debug:
 			print('		- Calculating coordinates live')
 
-	ob['SNet_targetList'] = SNet_MakeBall(ob['SNet_stateList'], ob['SNet_targetList'], ob['SNet_gridX'], ob['SNet_gridY'], ob['SNet_gridZ'], ob['SNet_gridLen'], ob['SNet_limitMax'], ob['SNet_limitMin'], ob['SNet_coords'], ob['SNet_useCoords'])
+	ob['SNet_targetList'] = SNet_MakeBall(ob['SNet_stateList'], ob['SNet_targetList'], ob['SNet_gridX'], ob['SNet_gridY'], ob['SNet_gridZ'], ob['SNet_gridLen'], ob['SNet_limitMax'], ob['SNet_limitMin'], ob['SNet_gridRes'], ob['SNet_coords'], ob['SNet_useCoords'])
 		
 	# Select the object
 	ob.select = True
 	scn.objects.active = ob
-	
-	
-		
-# OLD CLASS SHOULD NOT BE USED
-class SurfaceNet():
-
-	# Initialise the class
-	def __init__(self, context, debug, useCoords, showGrowth):
-	
-		#bpy.ops.object.mode_set(mode='OBJECT')
-		self.debug = debug
-		
-		if self.debug:
-			print('\n	--- STARTING ---\n')
-			self.startTime = time.time()
-			
-		# LOTS OF SETTINGS
-		bpy.ops.object.select_all(action='DESELECT')
-	
-		self.useCoords = useCoords
-		
-		self.growSpeed = 0.05
-		self.stateLength = 100
-		self.stateHalf = round(self.stateLength * 0.5)
-		self.showGrowth = showGrowth
-		self.growing = False
-		
-		# The max and min values for our grid
-		self.limitMax = 1.0
-		self.limitMin = -1.0
-		
-		# Make the grid!
-		self.gridSize = 10
-		self.gridX = self.gridSize
-		self.gridY = self.gridSize
-		self.gridZ = self.gridSize
-		self.gridLevel = self.gridX * self.gridY
-		self.gridRes = [self.gridX, self.gridY, self.gridZ]
-		self.gridLen = self.gridX * self.gridY * self.gridZ
-		self.gridCnt = self.gridLen / self.gridLevel
-		
-		# Make target and state values
-		self.targetList = array('f', ones_of(self.gridLen))
-		self.currentList = copy(self.targetList)
-		self.stateList = array('f', zeros_of(self.gridLen))
-		
-		
-		# Make a new mesh and object for the surface
-		self.shapeMesh = bpy.data.meshes.new("Surface")
-		self.shapeObject = bpy.data.objects.new('Surface', self.shapeMesh)
-		
-		self.mesher = SurfaceNetMesher()
-		
-		scene = context.scene
-		scene.objects.link(self.shapeObject)
-
-
-		# let's get the location of the 3d cursor
-		curLoc = bpy.context.scene.cursor_location
-		
-		 # Make a list of all coordinates
-		if useCoords:
-			if self.debug:
-				print('		- Generating list of coordinates')
-			self.coords = SNet_MakeCoords(self.gridLen, self.gridRes)
-		elif self.debug:
-			print('		- Calculating coordinates live')
-		
-		
-		self.MakeBall()
-		#self.MakeStick()
-				
-		self.GrowShape()
-		
-		# Testing a function to get points near eacht other
-		#self.GetNear(250)
-
-		# Select the new object
-		self.shapeObject.select = True
-		scene.objects.active = self.shapeObject
-
-		if self.debug:
-			now = time.time()
-			print('		- Time spent =', str(round((now - self.startTime), 3))+'s')
-			print('\n	--- FINISHED SURFACE NET ---\n')
-			
-		return
-	
-	
-		
-
-	
-	
-	
-
-	
-		
-		
-
 		
 		
 		
