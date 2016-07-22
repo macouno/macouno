@@ -42,7 +42,7 @@ from macouno.snet_utils import *
 
 Volume = namedtuple("Volume", "data dimms")
 	
-	
+
 	
 @persistent
 def SNet_Update(context):
@@ -52,7 +52,7 @@ def SNet_Update(context):
 	for ob in context.objects:
 		if ob.SNet_enabled:
 			try:
-				if ob['SNet_growing']:
+				if ob['SNet_animate'] != 'NON':
 					growing = True
 				else:
 					growing = False
@@ -76,7 +76,7 @@ def SNet_Set(self, value):
 		
 
 # Set up the object!
-def SNet_Add(context, debug, gridSize, showGrowth, useCoords):
+def SNet_Add(context, debug, gridSize, animate, useCoords):
 
 	# Make a new mesh and object for the surface
 	me = bpy.data.meshes.new("Surface")
@@ -89,11 +89,10 @@ def SNet_Add(context, debug, gridSize, showGrowth, useCoords):
 	ob.SNet_enabled = True
 	
 	ob['SNet_debug'] = debug
-	ob['SNet_showGrowth'] = showGrowth
+	ob['SNet_animate'] = animate
 	ob['SNet_useCoords'] = useCoords
-	ob['SNet_growSpeed'] = 0.05
-	ob['SNet_stateLength'] = 100
-	ob['SNet_stateHalf'] = round(ob['SNet_stateLength'] * 0.5)
+	ob['SNet_growTime'] = 5.0 # in seconds to completion
+	ob['SNet_lastMod'] = time.gmtime()
 	
 	ob['SNet_gridSize'] = mathutils.Vector((gridSize,gridSize,gridSize))
 	ob['SNet_gridX'] = gridSize
@@ -144,7 +143,13 @@ class OpAddSurfaceNet(bpy.types.Operator):
 	bl_label = "Add Surface Net"
 	bl_options = {"REGISTER", "UNDO"}
 	
-	showGrowth = BoolProperty(name='Show Growth', description='Update the scene to show the growth of the form (takes more time and memory)', default=True)
+	modes=(
+		('NON', 'No', ''),
+		('RED', 'Redraw', ''),
+		('ANI', 'Animate', ''),
+		)
+	
+	animate = EnumProperty(items=modes, name='Animate', description='What to do on update', default='NON')
 	
 	useCoords = BoolProperty(name='Use Coordinate List', description='Use a list of coordinates in stead of calculating every position', default=True)
 	
@@ -153,7 +158,7 @@ class OpAddSurfaceNet(bpy.types.Operator):
 	debug = BoolProperty(name='Debug', description='Get timing info in the console', default=True)
 
 	def execute(self, context):
-		SNet_Add(context, self.debug, self.gridSize, self.showGrowth, self.useCoords)
+		SNet_Add(context, self.debug, self.gridSize, self.animate, self.useCoords)
 		#Net = SurfaceNet(context, self.debug, self.useCoords, self.showGrowth);
 		return {'FINISHED'}
 

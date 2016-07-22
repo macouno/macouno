@@ -3,10 +3,12 @@ UTILITIES
 
 For use in combination with the snet_core
 '''
-import mathutils, bpy, math
+import mathutils, bpy, math, time
 from copy import copy
 from macouno.snet_core import *
 
+	
+	
 
 # Make coordinates for every point in the volume (not needed if you use GetLocation
 def SNet_MakeCoords(len, res):
@@ -285,17 +287,31 @@ def SNet_GetGridNear(n, steps, gridX, gridLevel, gridCnt):
 	near = SNet_GetGridZ(n,near, steps, gridLevel, gridCnt)
 	
 	return near
+
 	
 
+# Find out how much time elapsed since the last iteration
+# So this iteration is a percentage of the total (being 100%)
+def SNet_TimeFactor(animate, lastMod, growTime):
+	
+	now = time.gmtime()
+	
+	elapsed = now - lastMod
+	
+	factor = growTime / elapsed
+
+	return factor
+	
+	
 
 def SNet_GrowStep(ob):
+
+	timeFactor = SNet_TimeFactor(ob['SNet_animate'], ob['SNet_lastMod'], ob['SNet_growTime'])
 
 	# Retrieve the variables we need
 	currentList = ob['SNet_currentList']
 	targetList = ob['SNet_targetList']
 	stateList = ob['SNet_stateList']
-	stateLength = ob['SNet_stateLength']
-	stateHalf = ob['SNet_stateHalf']
 	gridX = ob['SNet_gridX']
 	gridY = ob['SNet_gridY']
 	gridLevel = ob['SNet_gridLevel']
@@ -306,7 +322,7 @@ def SNet_GrowStep(ob):
 	# Stop growing if nothing can be found!
 	growing = False
 	
-	if not ob['SNet_showGrowth']:
+	if ob['SNet_animate'] == 'NON':
 		SNet_ApplyShape(ob, gridRes, targetList)
 		currentList = [t for t in targetList]
 		stateList = [0 for t in targetList]
@@ -315,6 +331,7 @@ def SNet_GrowStep(ob):
 	
 		for i, target in enumerate(targetList):
 		
+			lastTime = timeList[i]
 			state = stateList[i]
 			
 			# If this location is growing... we know what to do!
@@ -325,7 +342,7 @@ def SNet_GrowStep(ob):
 					growing = True
 				
 				# If we haven't reached the end of the growth cycle...
-				if state < stateLength:
+				if state < 100:
 					
 					# Start my neighbours
 					if state == stateHalf:
