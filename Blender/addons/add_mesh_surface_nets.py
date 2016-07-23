@@ -52,12 +52,9 @@ def SNet_Update(context):
 	for ob in context.objects:
 		if ob.SNet_enabled:
 			try:
-				if ob['SNet_animate'] != 'NON':
-					growing = True
-				else:
-					growing = False
+				growing = ob['SNet_growing']
 			except:
-					growing = False
+				growing = False
 				
 			if growing:
 				SNet_GrowStep(ob)
@@ -92,7 +89,7 @@ def SNet_Add(context, debug, gridSize, animate, useCoords):
 	ob['SNet_animate'] = animate
 	ob['SNet_useCoords'] = useCoords
 	ob['SNet_growTime'] = 5.0 # in seconds to completion
-	ob['SNet_lastMod'] = time.gmtime()
+	ob['SNet_lastMod'] = time.time()
 	
 	ob['SNet_gridSize'] = mathutils.Vector((gridSize,gridSize,gridSize))
 	ob['SNet_gridX'] = gridSize
@@ -107,7 +104,7 @@ def SNet_Add(context, debug, gridSize, animate, useCoords):
 	# Make target and state values
 	ob['SNet_targetList'] = array('f', ones_of(ob['SNet_gridLen']))
 	ob['SNet_currentList'] = [t for t in ob['SNet_targetList']]
-	ob['SNet_stateList'] = array('f', zeros_of(ob['SNet_gridLen']))
+	ob['SNet_stateList'] = [False for t in ob['SNet_targetList']]
 	
 	# The max and min values for our grid
 	ob['SNet_limitMax'] = 1.0
@@ -144,12 +141,12 @@ class OpAddSurfaceNet(bpy.types.Operator):
 	bl_options = {"REGISTER", "UNDO"}
 	
 	modes=(
-		('NON', 'No', ''),
-		('RED', 'Redraw', ''),
-		('ANI', 'Animate', ''),
+		('NON', 'No', 'Instant result in the interface'),
+		('RED', 'Redraw', 'Redraw the interface showing the results'),
+		('ANI', 'Animate', 'Render an animation using your rendersettings'),
 		)
 	
-	animate = EnumProperty(items=modes, name='Animate', description='What to do on update', default='NON')
+	animate = EnumProperty(items=modes, name='Animate', description='What to do on update', default='RED')
 	
 	useCoords = BoolProperty(name='Use Coordinate List', description='Use a list of coordinates in stead of calculating every position', default=True)
 	

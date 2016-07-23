@@ -129,7 +129,7 @@ def SNet_MakeBall(stateList, targetList, gridX, gridY, gridZ, gridLevel, gridLen
 				val = -1.0
 				# SET A STATE!
 				print("STARTING POINT",i)
-				stateList[i] = 1
+				stateList[i] = 0
 			
 			targetList[i] = SNet_LimitValue(val, limitMax, limitMin)
 				
@@ -151,7 +151,7 @@ def SNet_MakeStick(stateList, targetList, gridX, gridY, gridZ, gridLevel):
 	middle = mathutils.Vector((gridX*0.5, gridY*0.5, gridZ*0.5))
 	
 	m = SNet_GetGridMiddle(gridX, gridY, gridZ, gridLevel)
-	stateList[m] = 1
+	stateList[m] = 0
 	targetList[m] = -1
 	
 	near = []
@@ -274,17 +274,23 @@ def SNet_GetGridZ(n, near, steps, gridLevel, gridCnt):
 
 
 # Get all adjacent points
-def SNet_GetGridNear(n, steps, gridX, gridLevel, gridCnt):
+def SNet_GetGridNear(i, steps, gridX, gridLevel, gridCnt, stateList):
 	
 	near = []
 
 	# Get the next items on this level
-	near = SNet_GetGridX(n, near, -steps, gridX)
-	near = SNet_GetGridX(n, near, steps, gridX)
-	near = SNet_GetGridY(n, near, -steps, gridX, gridLevel)
-	near = SNet_GetGridY(n, near, steps, gridX, gridLevel)
-	near = SNet_GetGridZ(n,near, -steps, gridLevel, gridCnt)
-	near = SNet_GetGridZ(n,near, steps, gridLevel, gridCnt)
+	near = SNet_GetGridX(i, near, -steps, gridX)
+	if 1000 in near: print('Found at X 1')
+	near = SNet_GetGridX(i, near, steps, gridX)
+	if 1000 in near: print('Found at X 2')
+	near = SNet_GetGridY(i, near, -steps, gridX, gridLevel)
+	if 1000 in near: print('Found at Y 1')
+	near = SNet_GetGridY(i, near, steps, gridX, gridLevel)
+	if 1000 in near: print('Found at Y 2')
+	near = SNet_GetGridZ(i, near, -steps, gridLevel, gridCnt)
+	if 1000 in near: print('Found at Z 1')
+	near = SNet_GetGridZ(i, near, steps, gridLevel, gridCnt)
+	if 1000 in near: print('Found at Z 2')
 	
 	return near
 
@@ -292,9 +298,10 @@ def SNet_GetGridNear(n, steps, gridX, gridLevel, gridCnt):
 
 # Find out how much time elapsed since the last iteration
 # So this iteration is a percentage of the total (being 100%)
+# This is the percentage to add to the state!
 def SNet_TimeFactor(animate, lastMod, growTime):
 	
-	now = time.gmtime()
+	now = time.time()
 	
 	elapsed = now - lastMod
 	
@@ -325,54 +332,62 @@ def SNet_GrowStep(ob):
 	if ob['SNet_animate'] == 'NON':
 		SNet_ApplyShape(ob, gridRes, targetList)
 		currentList = [t for t in targetList]
-		stateList = [0 for t in targetList]
+		stateList = [False for t in targetList]
 		
 	else:
 	
 		for i, target in enumerate(targetList):
 		
-			lastTime = timeList[i]
-			state = stateList[i]
+			oldState = stateList[i]
 			
 			# If this location is growing... we know what to do!
-			if state > 0:
+			if not oldState is False:
+			
+				newState = oldState + timeFactor
 				
 				# Keep growing!
 				if not growing:
 					growing = True
 				
-				# If we haven't reached the end of the growth cycle...
-				if state < 100:
+				# If we have come halfway... see about expanding the growth from this point
+				if oldState < 50 and newState > 50:
+						
+					# n, steps, gridX, gridLevel, gridCnt)
 					
-					# Start my neighbours
-					if state == stateHalf:
-						
-						near = SNet_GetGridNear(i, 1, gridX, gridLevel, gridCnt)
-						
-						for n in near:
-						
-							if stateList[n] == 0:
-								if targetList[n] != currentList[n]:
-									stateList[n] = 1
+					near = SNet_GetGridNear(i, 1, gridX, gridLevel, gridCnt, stateList)
+					for n in near:
+						m = n -1
+						try:
+							if stateList[m] is False:
+								if targetList[m] != currentList[m]:
+									stateList[m] = 0
+						except:
+							print('Cant find ',m,' at ',i)
 								
-						
+				if newState < 100:
+					
+					# The difference between where we are going and where we are at
 					dif = targetList[i] - currentList[i]
 					
-					dif /= (stateLength - state)
+					# One percent is... What remains after subtracting the old state from 100
+					dif /= (100 - oldState)
 					
+					dif *= timeFactor
+				
 					currentList[i] += dif
-					
-					stateList[i] = state + 1
+				
+					stateList[i] = newState
 					
 				# If the state has reached its maximum we are done growing
 				else:
 					
 					currentList[i] = targetList[i]
-					stateList[i] = 0
+					stateList[i] = False
 		
 		if growing:
 			SNet_ApplyShape(ob, gridRes, currentList)
 	
+	ob['SNet_lastMod'] = time.time()
 	ob['SNet_growing'] = growing
 	ob['SNet_currentList'] = currentList
 	ob['SNet_stateList'] = stateList
