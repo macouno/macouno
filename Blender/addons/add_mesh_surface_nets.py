@@ -31,8 +31,9 @@ bl_info = {
 	"support": 'TESTING',
 	"category": "Add Mesh"}
 
-import bpy, mathutils, math, time
+import bpy, mathutils, math
 from copy import copy
+from time import time
 from bpy.app.handlers import persistent
 from collections import namedtuple
 from bpy.props import IntProperty, EnumProperty, FloatVectorProperty, FloatProperty, BoolProperty
@@ -87,9 +88,17 @@ def SNet_Add(context, debug, gridSize, animate, useCoords):
 	
 	ob['SNet_debug'] = debug
 	ob['SNet_animate'] = animate
+	ob['SNet_lastMod'] = time()
 	ob['SNet_useCoords'] = useCoords
+<<<<<<< .mine
+	ob['SNet_growSpeed'] = 0.05
+	ob['SNet_growTime'] = 5.0 #Nr of seconds each item takes to grow
+	ob['SNet_stateLength'] = 100
+	ob['SNet_stateHalf'] = round(ob['SNet_stateLength'] * 0.5)
+=======
 	ob['SNet_growTime'] = 5.0 # in seconds to completion
 	ob['SNet_lastMod'] = time.time()
+>>>>>>> .r121
 	
 	ob['SNet_gridSize'] = mathutils.Vector((gridSize,gridSize,gridSize))
 	ob['SNet_gridX'] = gridSize
@@ -103,8 +112,13 @@ def SNet_Add(context, debug, gridSize, animate, useCoords):
 	
 	# Make target and state values
 	ob['SNet_targetList'] = array('f', ones_of(ob['SNet_gridLen']))
+<<<<<<< .mine
+	ob['SNet_currentList'] = array('f', ones_of(ob['SNet_gridLen']))
+	ob['SNet_stateList'] = array('f', minus_of(ob['SNet_gridLen']))
+=======
 	ob['SNet_currentList'] = [t for t in ob['SNet_targetList']]
 	ob['SNet_stateList'] = [False for t in ob['SNet_targetList']]
+>>>>>>> .r121
 	
 	# The max and min values for our grid
 	ob['SNet_limitMax'] = 1.0
@@ -123,7 +137,7 @@ def SNet_Add(context, debug, gridSize, animate, useCoords):
 		if debug:
 			print('		- Calculating coordinates live')
 
-	ob['SNet_targetList'] = SNet_MakeBall(ob['SNet_stateList'], ob['SNet_targetList'], ob['SNet_gridX'], ob['SNet_gridY'], ob['SNet_gridZ'], ob['SNet_gridLevel'], ob['SNet_gridLen'], ob['SNet_limitMax'], ob['SNet_limitMin'], ob['SNet_gridRes'], ob['SNet_coords'], ob['SNet_useCoords'])
+	ob['SNet_targetList'], ob['SNet_stateList'] = SNet_MakeBall(ob['SNet_stateList'], ob['SNet_targetList'], ob['SNet_gridX'], ob['SNet_gridY'], ob['SNet_gridZ'], ob['SNet_gridLevel'], ob['SNet_gridLen'], ob['SNet_limitMax'], ob['SNet_limitMin'], ob['SNet_gridRes'], ob['SNet_coords'], ob['SNet_useCoords'])
 	
 	ob['SNet_growing'] = True
 	
@@ -146,8 +160,13 @@ class OpAddSurfaceNet(bpy.types.Operator):
 		('ANI', 'Animate', 'Render an animation using your rendersettings'),
 		)
 	
+<<<<<<< .mine
+	showGrowth = EnumProperty(items=modes, name='showGrowth', description='What to do on update', default='RED')
+	
+=======
 	animate = EnumProperty(items=modes, name='Animate', description='What to do on update', default='RED')
 	
+>>>>>>> .r121
 	useCoords = BoolProperty(name='Use Coordinate List', description='Use a list of coordinates in stead of calculating every position', default=True)
 	
 	gridSize = IntProperty(name='Grid Size', default=10, min=0, max=100, soft_min=0, soft_max=1000)
@@ -156,7 +175,6 @@ class OpAddSurfaceNet(bpy.types.Operator):
 
 	def execute(self, context):
 		SNet_Add(context, self.debug, self.gridSize, self.animate, self.useCoords)
-		#Net = SurfaceNet(context, self.debug, self.useCoords, self.showGrowth);
 		return {'FINISHED'}
 
 
