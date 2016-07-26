@@ -39,6 +39,11 @@ from math import ceil, sqrt
 MesherResult = namedtuple("MesherResult", "vertices faces")
 Volume = namedtuple("Volume", "data dimms")
 
+def false_of(n):
+	return (False for i in range(n))
+	
+def minus_of(n):
+	return (-1.0 for i in range(n))
 
 def ones_of(n):
 	return (1.0 for i in range(n))
