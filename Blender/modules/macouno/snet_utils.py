@@ -4,6 +4,7 @@ UTILITIES
 For use in combination with the snet_core
 '''
 import mathutils, bpy, math, time
+from time import time
 from copy import copy
 from macouno.snet_core import *
 
@@ -140,7 +141,7 @@ def SNet_MakeBall(stateList, targetList, gridX, gridY, gridZ, gridLevel, gridLen
 			ob.name = 'True'
 			ob.show_name = False
 			
-	return targetList
+	return targetList, stateList
 	
 	
 
@@ -296,6 +297,19 @@ def SNet_GetGridNear(i, steps, gridX, gridLevel, gridCnt, stateList):
 
 	
 
+<<<<<<< .mine
+	
+# Find out how much time elapsed since the last iteration
+# So this iteration is a percentage of the total (being 100%)
+# This is the percentage to add to the state!
+def SNet_TimeFactor(showGrowth, lastMod, growTime):
+	
+	now = time()
+	
+	elapsed = now - lastMod
+	
+	factor = growTime / elapsed
+=======
 # Find out how much time elapsed since the last iteration
 # So this iteration is a percentage of the total (being 100%)
 # This is the percentage to add to the state!
@@ -306,15 +320,29 @@ def SNet_TimeFactor(animate, lastMod, growTime):
 	elapsed = now - lastMod
 	
 	factor = growTime / elapsed
+>>>>>>> .r122
 
+<<<<<<< .mine
+	return factor
+	
+	
+=======
 	return factor
 	
 	
 
 def SNet_GrowStep(ob):
+>>>>>>> .r122
 
+<<<<<<< .mine
+def SNet_GrowStep(ob):	
+
+	timeFactor = SNet_TimeFactor(ob['SNet_showGrowth'], ob['SNet_lastMod'], ob['SNet_growTime'])
+
+=======
 	timeFactor = SNet_TimeFactor(ob['SNet_animate'], ob['SNet_lastMod'], ob['SNet_growTime'])
 
+>>>>>>> .r122
 	# Retrieve the variables we need
 	currentList = ob['SNet_currentList']
 	targetList = ob['SNet_targetList']
@@ -329,10 +357,18 @@ def SNet_GrowStep(ob):
 	# Stop growing if nothing can be found!
 	growing = False
 	
+<<<<<<< .mine
+	if ob['SNet_showGrowth'] == 'NON':
+=======
 	if ob['SNet_animate'] == 'NON':
+>>>>>>> .r122
 		SNet_ApplyShape(ob, gridRes, targetList)
 		currentList = [t for t in targetList]
+<<<<<<< .mine
+		stateList = array('f', minus_of(gridLen))
+=======
 		stateList = [False for t in targetList]
+>>>>>>> .r122
 		
 	else:
 	
@@ -341,14 +377,35 @@ def SNet_GrowStep(ob):
 			oldState = stateList[i]
 			
 			# If this location is growing... we know what to do!
+<<<<<<< .mine
+			if oldState >= 0:
+=======
 			if not oldState is False:
 			
 				newState = oldState + timeFactor
+>>>>>>> .r122
 				
 				# Keep growing!
-				if not growing:
-					growing = True
+				growing = True
 				
+<<<<<<< .mine
+				newState = oldState + timeFactor
+				
+				# Start my neighbours
+				if oldState < 50 and newState >= 50:
+					
+					near = SNet_GetGridNear(i, 1, gridX, gridLevel, gridCnt)
+					
+					for n in near:
+					
+						if stateList[n] < 0:
+							if targetList[n] != currentList[n]:
+								stateList[n] = 0
+				
+				# If we haven't reached the end of the growth cycle...
+				if newState < 100:
+						
+=======
 				# If we have come halfway... see about expanding the growth from this point
 				if oldState < 50 and newState > 50:
 						
@@ -367,22 +424,42 @@ def SNet_GrowStep(ob):
 				if newState < 100:
 					
 					# The difference between where we are going and where we are at
+>>>>>>> .r122
 					dif = targetList[i] - currentList[i]
 					
-					# One percent is... What remains after subtracting the old state from 100
+<<<<<<< .mine
 					dif /= (100 - oldState)
 					
 					dif *= timeFactor
 				
 					currentList[i] += dif
+					'''
+					dif /= (stateLength - state)
+=======
+					# One percent is... What remains after subtracting the old state from 100
+					dif /= (100 - oldState)
+>>>>>>> .r122
+					
+					dif *= timeFactor
+				
+					currentList[i] += dif
+<<<<<<< .mine
+					'''
+					stateList[i] = newState
+=======
 				
 					stateList[i] = newState
+>>>>>>> .r122
 					
 				# If the state has reached its maximum we are done growing
 				else:
 					
 					currentList[i] = targetList[i]
+<<<<<<< .mine
+					stateList[i] = -1.0
+=======
 					stateList[i] = False
+>>>>>>> .r122
 		
 		if growing:
 			SNet_ApplyShape(ob, gridRes, currentList)
@@ -391,6 +468,7 @@ def SNet_GrowStep(ob):
 	ob['SNet_growing'] = growing
 	ob['SNet_currentList'] = currentList
 	ob['SNet_stateList'] = stateList
+	ob['SNet_lastMod'] = time()
 
 
 
