@@ -3,7 +3,7 @@ UTILITIES
 
 For use in combination with the snet_core
 '''
-import mathutils, bpy, math, time
+import mathutils, bpy, math
 from time import time
 from copy import copy
 from macouno.snet_core import *
@@ -303,11 +303,20 @@ def SNet_GetGridNear(i, steps, gridX, gridLevel, gridCnt, stateList):
 # This is the percentage to add to the state!
 def SNet_TimeFactor(animate, lastMod, growTime):
 	
-	now = time.time()
+	now = time()
 	
 	elapsed = now - lastMod
 	
+	if elapsed <= 0.0:
+		return 0.0
+	
 	factor = growTime / elapsed
+	
+	# Factor as a float
+	factor = 1.0 / factor
+	
+	# But what we want is in percentages
+	factor *= 100.0
 
 	return factor
 	
@@ -316,8 +325,10 @@ def SNet_TimeFactor(animate, lastMod, growTime):
 
 def SNet_GrowStep(ob):	
 
-	timeFactor = SNet_TimeFactor(ob['SNet_showGrowth'], ob['SNet_lastMod'], ob['SNet_growTime'])
-
+	timeFactor = SNet_TimeFactor(ob['SNet_animate'], ob['SNet_lastMod'], ob['SNet_growTime'])
+	
+	ob['SNet_lastMod'] = time()
+	
 	# Retrieve the variables we need
 	currentList = ob['SNet_currentList']
 	targetList = ob['SNet_targetList']
@@ -333,7 +344,7 @@ def SNet_GrowStep(ob):
 	growing = False
 	
 
-	if ob['SNet_showGrowth'] == 'NON':
+	if ob['SNet_animate'] == 'NON':
 
 		SNet_ApplyShape(ob, gridRes, targetList)
 		currentList = [t for t in targetList]
@@ -360,7 +371,7 @@ def SNet_GrowStep(ob):
 				# Start my neighbours
 				if oldState < 50 and newState >= 50:
 					
-					near = SNet_GetGridNear(i, 1, gridX, gridLevel, gridCnt)
+					near = SNet_GetGridNear(i, 1, gridX, gridLevel, gridCnt, stateList)
 					
 					for n in near:
 					
@@ -393,11 +404,10 @@ def SNet_GrowStep(ob):
 		if growing:
 			SNet_ApplyShape(ob, gridRes, currentList)
 	
-	ob['SNet_lastMod'] = time.time()
 	ob['SNet_growing'] = growing
 	ob['SNet_currentList'] = currentList
 	ob['SNet_stateList'] = stateList
-	ob['SNet_lastMod'] = time()
+	
 
 
 

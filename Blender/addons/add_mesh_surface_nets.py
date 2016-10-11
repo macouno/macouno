@@ -74,7 +74,7 @@ def SNet_Set(self, value):
 		
 
 # Set up the object!
-def SNet_Add(context, debug, gridSize, animate, useCoords):
+def SNet_Add(context, debug, gridSize, animate, growTime, useCoords):
 
 	# Make a new mesh and object for the surface
 	me = bpy.data.meshes.new("Surface")
@@ -90,8 +90,7 @@ def SNet_Add(context, debug, gridSize, animate, useCoords):
 	ob['SNet_animate'] = animate
 	ob['SNet_lastMod'] = time()
 	ob['SNet_useCoords'] = useCoords
-	ob['SNet_growSpeed'] = 0.05
-	ob['SNet_growTime'] = 5.0 #Nr of seconds each item takes to grow
+	ob['SNet_growTime'] = growTime #Nr of seconds each item takes to grow
 	ob['SNet_stateLength'] = 100
 	ob['SNet_stateHalf'] = round(ob['SNet_stateLength'] * 0.5)
 
@@ -153,16 +152,18 @@ class OpAddSurfaceNet(bpy.types.Operator):
 		)
 	
 
-	showGrowth = EnumProperty(items=modes, name='showGrowth', description='What to do on update', default='RED')
+	animate = EnumProperty(items=modes, name='animate', description='What to do on update', default='RED')
 	
 	useCoords = BoolProperty(name='Use Coordinate List', description='Use a list of coordinates in stead of calculating every position', default=True)
+	
+	growTime = FloatProperty(name='Growthrate', description='Speed of growth', default=5.0, min=0.1, max=100.0, soft_min=0.1, soft_max=100.0, step=0.2, precision=2)
 	
 	gridSize = IntProperty(name='Grid Size', default=10, min=0, max=100, soft_min=0, soft_max=1000)
 	
 	debug = BoolProperty(name='Debug', description='Get timing info in the console', default=True)
 
 	def execute(self, context):
-		SNet_Add(context, self.debug, self.gridSize, self.animate, self.useCoords)
+		SNet_Add(context, self.debug, self.gridSize, self.animate, self.growTime, self.useCoords)
 		return {'FINISHED'}
 
 
