@@ -52,16 +52,14 @@ def SNet_Update(context):
 	
 	for ob in context.objects:
 		if ob.SNet_enabled:
-			try:
-				growing = ob['SNet_growing']
-			except:
-				growing = False
-				
-			if growing:
-				SNet_GrowStep(ob)
-		
-			#if ob.location[0] < 10.0:
-			#	ob.location[0] += 0.01
+			if ob['SNet_animate'] != 'ANI':
+				try:
+					growing = ob['SNet_growing']
+				except:
+					growing = False
+					
+				if growing:
+					SNet_GrowStep(ob)
 			
 			
 			
@@ -94,7 +92,7 @@ def SNet_Add(context, debug, gridSize, animate, growTime, useCoords, centerObjec
 	ob['SNet_growTime'] = growTime #Nr of seconds each item takes to grow
 	ob['SNet_stateLength'] = 100
 	ob['SNet_stateHalf'] = round(ob['SNet_stateLength'] * 0.5)
-	ob['SNet_frameCur'] = scn.frame_current
+	ob['SNet_frameCurrent'] = scn.frame_current
 	ob['SNet_frameStart'] = scn.frame_start
 	ob['SNet_frameEnd'] = scn.frame_end
 
@@ -138,6 +136,11 @@ def SNet_Add(context, debug, gridSize, animate, growTime, useCoords, centerObjec
 	# Select the object
 	ob.select = True
 	scn.objects.active = ob
+	
+	if animate == 'ANI':
+		while ob['SNet_growing']:
+			SNet_GrowStep(ob)
+			bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
 		
 		
 		

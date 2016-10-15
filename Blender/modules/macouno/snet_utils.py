@@ -9,7 +9,6 @@ from copy import copy
 from macouno.snet_core import *
 
 	
-	
 
 # Make coordinates for every point in the volume (not needed if you use GetLocation
 def SNet_MakeCoords(len, res):
@@ -335,18 +334,20 @@ def SNet_TimeFactor(animate, lastMod, growTime):
 	
 	
 
+# Finish growing (really for after animation)
 def SNet_FinishShape(shapeObject, animate):
 
 	if animate == 'ANI':
+		
+		ob = shapeObject
 		
 		scn = bpy.context.scene
 		
 		scn.frame_current = ob['SNet_frameCurrent']
 		scn.frame_start = ob['SNet_frameStart']
 		scn.frame_end = ob['SNet_frameEnd']
-		
-	
-	
+
+
 
 
 def SNet_GrowStep(ob):	
@@ -356,6 +357,7 @@ def SNet_GrowStep(ob):
 	ob['SNet_lastMod'] = time()
 	
 	# Retrieve the variables we need
+	animate = ob['SNet_animate']
 	currentList = ob['SNet_currentList']
 	targetList = ob['SNet_targetList']
 	stateList = ob['SNet_stateList']
@@ -371,7 +373,7 @@ def SNet_GrowStep(ob):
 	growing = False
 	
 
-	if ob['SNet_animate'] == 'NON':
+	if animate == 'NON':
 
 		SNet_ApplyShape(ob, gridRes, targetList, centerObject)
 		currentList = [t for t in targetList]
@@ -435,6 +437,13 @@ def SNet_GrowStep(ob):
 	ob['SNet_currentList'] = currentList
 	ob['SNet_stateList'] = stateList
 	
+	if animate == 'ANI':
+		scn = bpy.context.scene
+
+		scn.frame_start = scn.frame_end = scn.frame_current
+		bpy.ops.render.render(animation=True)
+		scn.frame_current += 1
+	
 	if not growing:
 		SNet_FinishShape(ob, animate)
 	
@@ -445,34 +454,7 @@ def SNet_GrowStep(ob):
 def SNet_ApplyShape(shapeObject, gridRes, currentList, centerObject):
 
 	mesher = SurfaceNetMesher()
-	'''
-	dot = Volume(data=array('f', [
-	
-	1.0, 1.0, 1.0, 1.0,
-	1.0, 1.0, 1.0, 1.0,
-	1.0, 1.0, 1.0, 1.0,
-	1.0, 1.0, 1.0, 1.0,
-	
-	1.0, 1.0, 1.0, 1.0,
-	1.0, 1.0, 1.0, 1.0,
-	1.0, 1.0, 1.0, 1.0,
-	1.0, 1.0, 1.0, 1.0,
-	
-	1.0, 1.0, 1.0, 1.0,
-	1.0, 1.0, 1.0, 1.0,
-	1.0, 1.0, -1.0, 1.0,
-	1.0, 1.0, 1.0, 1.0,
-	
-	1.0, 1.0, 1.0, 1.0,
-	1.0, 1.0, 1.0, 1.0,
-	1.0, 1.0, 1.0, 1.0,
-	1.0, 1.0, 1.0, 1.0
-	
-	]), dimms=[4, 4, 4])
-	
-	dot = create_torus()
-	dot = create_sphere()
-	'''
+
 	# Create the meshed volume
 	meshed_volume = mesher.mesh_volume(*Volume(dimms = gridRes, data = currentList))
 	#meshed_volume = mesher.mesh_volume(*dot)
@@ -485,7 +467,6 @@ def SNet_ApplyShape(shapeObject, gridRes, currentList, centerObject):
 		min = [False, False, False]
 		max = [False, False, False]
 
-		
 		for v in shapeObject.data.vertices:
 		
 			for i in range(3):
@@ -495,14 +476,19 @@ def SNet_ApplyShape(shapeObject, gridRes, currentList, centerObject):
 				if max[i] is False or co > max[i]:
 					max[i] = co		
 				
-	off = [
-		(-(max[0] - min[0])*0.5)+min[0],
-		(-(max[1] - min[1])*0.5)+min[1],
-		-min[2]
-		]
+	max = mathutils.Vector(max)
+	min = -mathutils.Vector(min)
+	mid = max + min
+	mid *= 0.5
+	
+	off = min
+	off[0] -= mid[0]
+	off[1] -= mid[1]
+	
+	#off = mathutils.Vector((-min[0]-((max[0] - min[0])*0.5),-(max[1] - min[1])*0.5)+min[1],	-min[2])
 				
 	# For now just set the object location because it's faster (apply location after we finish the object)
-	shapeObject.location = mathutils.Vector(off)
+	shapeObject.location = off
 	return
 	
 	
