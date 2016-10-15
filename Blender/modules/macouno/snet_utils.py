@@ -303,20 +303,32 @@ def SNet_GetGridNear(i, steps, gridX, gridLevel, gridCnt, stateList):
 # This is the percentage to add to the state!
 def SNet_TimeFactor(animate, lastMod, growTime):
 	
-	now = time()
+	if animate == 'ANI':
+		
+		fps = bpy.context.scene.render.fps
+		
+		# Let's make it 24fps for now
+		totalTime = growTime * fps
+		
+		factor = 100.0 / totalTime
+		
+		return factor
 	
-	elapsed = now - lastMod
-	
-	if elapsed <= 0.0:
-		return 0.0
-	
-	factor = growTime / elapsed
-	
-	# Factor as a float
-	factor = 1.0 / factor
-	
-	# But what we want is in percentages
-	factor *= 100.0
+	else:
+		now = time()
+		
+		elapsed = now - lastMod
+		
+		if elapsed <= 0.0:
+			return 0.0
+		
+		factor = growTime / elapsed
+		
+		# Factor as a float
+		factor = 1.0 / factor
+		
+		# But what we want is in percentages
+		factor *= 100.0
 
 	return factor
 	
