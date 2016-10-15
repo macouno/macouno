@@ -339,6 +339,7 @@ def SNet_GrowStep(ob):
 	gridLen = ob['SNet_gridLen']
 	gridRes = ob['SNet_gridRes']
 	gridCnt = ob['SNet_gridCnt']
+	centerObject = ob['SNet_centerObject']
 	
 	# Stop growing if nothing can be found!
 	growing = False
@@ -346,7 +347,7 @@ def SNet_GrowStep(ob):
 
 	if ob['SNet_animate'] == 'NON':
 
-		SNet_ApplyShape(ob, gridRes, targetList)
+		SNet_ApplyShape(ob, gridRes, targetList, centerObject)
 		currentList = [t for t in targetList]
 		stateList = array('f', minus_of(gridLen))
 
@@ -402,7 +403,7 @@ def SNet_GrowStep(ob):
 
 		
 		if growing:
-			SNet_ApplyShape(ob, gridRes, currentList)
+			SNet_ApplyShape(ob, gridRes, currentList, centerObject)
 	
 	ob['SNet_growing'] = growing
 	ob['SNet_currentList'] = currentList
@@ -411,7 +412,7 @@ def SNet_GrowStep(ob):
 
 
 
-def SNet_ApplyShape(shapeObject, gridRes, currentList):
+def SNet_ApplyShape(shapeObject, gridRes, currentList, centerObject):
 
 	mesher = SurfaceNetMesher()
 	'''
@@ -448,6 +449,32 @@ def SNet_ApplyShape(shapeObject, gridRes, currentList):
 	
 	# Apply the volume data to the mesh
 	shapeObject.data = mesh_from_data(*meshed_volume)
+	
+	if centerObject:
+	
+		min = [False, False, False]
+		max = [False, False, False]
+
+		
+		for v in shapeObject.data.vertices:
+		
+			for i in range(3):
+				co = v.co[i]
+				if min[i] is False or co < min[i]:
+					min[i] = co			
+				if max[i] is False or co > max[i]:
+					max[i] = co		
+				
+	off = [
+		((max[0] - min[0])*0.5)+min[0],
+		((max[1] - min[1])*0.5)+min[1],
+		min[2]
+		]
+				
+	for v in shapeObject.data.vertices:
+		for i in range(3):
+			v.co[i] -= off[i]
+	
 	
 	#time.sleep(0.01)
 	#bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=2)
