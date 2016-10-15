@@ -94,8 +94,10 @@ def SNet_Add(context, debug, gridSize, animate, growTime, useCoords, centerObjec
 	ob['SNet_growTime'] = growTime #Nr of seconds each item takes to grow
 	ob['SNet_stateLength'] = 100
 	ob['SNet_stateHalf'] = round(ob['SNet_stateLength'] * 0.5)
+	ob['SNet_frameCur'] = scn.frame_current
+	ob['SNet_frameStart'] = scn.frame_start
+	ob['SNet_frameEnd'] = scn.frame_end
 
-	
 	ob['SNet_gridSize'] = mathutils.Vector((gridSize,gridSize,gridSize))
 	ob['SNet_gridX'] = gridSize
 	ob['SNet_gridY'] = gridSize

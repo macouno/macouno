@@ -333,6 +333,20 @@ def SNet_TimeFactor(animate, lastMod, growTime):
 	return factor
 	
 	
+	
+
+def SNet_FinishShape(shapeObject, animate):
+
+	if animate == 'ANI':
+		
+		scn = bpy.context.scene
+		
+		scn.frame_current = ob['SNet_frameCurrent']
+		scn.frame_start = ob['SNet_frameStart']
+		scn.frame_end = ob['SNet_frameEnd']
+		
+	
+	
 
 
 def SNet_GrowStep(ob):	
@@ -421,6 +435,10 @@ def SNet_GrowStep(ob):
 	ob['SNet_currentList'] = currentList
 	ob['SNet_stateList'] = stateList
 	
+	if not growing:
+		SNet_FinishShape(ob, animate)
+	
+	
 
 
 
@@ -478,14 +496,14 @@ def SNet_ApplyShape(shapeObject, gridRes, currentList, centerObject):
 					max[i] = co		
 				
 	off = [
-		((max[0] - min[0])*0.5)+min[0],
-		((max[1] - min[1])*0.5)+min[1],
-		min[2]
+		(-(max[0] - min[0])*0.5)+min[0],
+		(-(max[1] - min[1])*0.5)+min[1],
+		-min[2]
 		]
 				
-	for v in shapeObject.data.vertices:
-		for i in range(3):
-			v.co[i] -= off[i]
+	# For now just set the object location because it's faster (apply location after we finish the object)
+	shapeObject.location = mathutils.Vector(off)
+	return
 	
 	
 	#time.sleep(0.01)
