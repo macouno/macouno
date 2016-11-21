@@ -289,7 +289,7 @@ def create_torus():
 	)
 
 
-def mesh_from_data(vertices, faces, name="MesherResult"):
+def mesh_from_data(mesh,vertices, faces, name="MesherResult"):
 	mesh_data = bpy.data.meshes.new("cube_mesh_data")
 	mesh_data.from_pydata(vertices, [], faces)
 	mesh_data.update()  # (calc_edges=True) not needed here

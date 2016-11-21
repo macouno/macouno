@@ -439,7 +439,6 @@ def SNet_GrowStep(ob):
 	
 	if animate == 'ANI':
 		scn = bpy.context.scene
-
 		scn.frame_start = scn.frame_end = scn.frame_current
 		bpy.ops.render.render(animation=True)
 		scn.frame_current += 1
@@ -460,7 +459,7 @@ def SNet_ApplyShape(shapeObject, gridRes, currentList, centerObject):
 	#meshed_volume = mesher.mesh_volume(*dot)
 	
 	# Apply the volume data to the mesh
-	shapeObject.data = mesh_from_data(*meshed_volume)
+	shapeObject.data = mesh_from_data(shapeObject.data, *meshed_volume)
 	
 	if centerObject:
 	

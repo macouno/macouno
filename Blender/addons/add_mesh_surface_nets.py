@@ -19,12 +19,12 @@
 
 
 bl_info = {
-	"name": "Add Surface Net",
+	"name": "Add snet",
 	"author": "macouno",
 	"version": (0, 1),
 	"blender": (2, 7, 0),
-	"location": "View3D > Add > Mesh > Surface Net",
-	"description": "Create a mesh from a surface net",
+	"location": "View3D > Add > Mesh > snet",
+	"description": "Create a form from a surface net",
 	"warning": "",
 	"wiki_url": "",
 	"tracker_url": "",
@@ -36,8 +36,8 @@ from copy import copy
 from time import time
 from bpy.app.handlers import persistent
 from collections import namedtuple
-from bpy.props import IntProperty, EnumProperty, FloatVectorProperty, FloatProperty, BoolProperty
-from macouno import bmesh_extras, scene_update
+from bpy.props import StringProperty, IntProperty, EnumProperty, FloatVectorProperty, FloatProperty, BoolProperty
+from macouno import bmesh_extras, scene_update, liberty
 from macouno.snet_core import *
 from macouno.snet_utils import *
 
@@ -72,7 +72,7 @@ def SNet_Set(self, value):
 		
 
 # Set up the object!
-def SNet_Add(context, debug, gridSize, animate, growTime, useCoords, centerObject):
+def SNet_Add(context, dnaString, debug, gridSize, animate, growTime, useCoords, centerObject):
 
 	# Make a new mesh and object for the surface
 	me = bpy.data.meshes.new("Surface")
@@ -85,6 +85,7 @@ def SNet_Add(context, debug, gridSize, animate, growTime, useCoords, centerObjec
 	ob.SNet_enabled = True
 	
 	ob['SNet_debug'] = debug
+	ob['SNet_dnaString'] = dnaString
 	ob['SNet_animate'] = animate
 	ob['SNet_lastMod'] = time()
 	ob['SNet_useCoords'] = useCoords
@@ -140,7 +141,7 @@ def SNet_Add(context, debug, gridSize, animate, growTime, useCoords, centerObjec
 	if animate == 'ANI':
 		while ob['SNet_growing']:
 			SNet_GrowStep(ob)
-			bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
+			#bpy.ops.wm.redraw_timer(type='DRAW_WIN_SWAP', iterations=1)
 		
 		
 		
@@ -151,12 +152,15 @@ class OpAddSurfaceNet(bpy.types.Operator):
 	bl_label = "Add Surface Net"
 	bl_options = {"REGISTER", "UNDO"}
 	
+	d='Guus'
+	
+	dnaString = StringProperty(name="DNA", description="DNA string to define your shape", default=d, maxlen=100)
+	
 	modes=(
 		('NON', 'No', 'Instant result in the interface'),
 		('RED', 'Redraw', 'Redraw the interface showing the results'),
 		('ANI', 'Animate', 'Render an animation using your rendersettings'),
 		)
-	
 
 	animate = EnumProperty(items=modes, name='animate', description='What to do on update', default='RED')
 	
@@ -171,12 +175,12 @@ class OpAddSurfaceNet(bpy.types.Operator):
 	debug = BoolProperty(name='Debug', description='Get timing info in the console', default=True)
 
 	def execute(self, context):
-		SNet_Add(context, self.debug, self.gridSize, self.animate, self.growTime, self.useCoords, self.centerObject)
+		SNet_Add(context, self.dnaString, self.debug, self.gridSize, self.animate, self.growTime, self.useCoords, self.centerObject)
 		return {'FINISHED'}
 
 
 def menu_func(self, context):
-	self.layout.operator(OpAddSurfaceNet.bl_idname, text="Surface Net", icon="MESH_CUBE")
+	self.layout.operator(OpAddSurfaceNet.bl_idname, text="snet", icon="MESH_CUBE")
 
 
 def register():
