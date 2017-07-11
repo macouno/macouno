@@ -112,15 +112,17 @@ class ImportGCODE(Operator, ImportHelper):
 				for li, line in enumerate(f.readlines()):
 				
 					# Keep track of what slice we're on
-					if line.startswith('; Slice'):
+					if line.startswith('; Slice') or line.startswith(';LAYER:'):
 						
 						slice = line.replace('; Slice ', '')
+						slice = line.replace(';LAYER:', '')
 						slice = int(slice)
+						print("Layer ",str(slice))
 					
 					# Only slices are added! The stuff before we don't need
 					if not slice is False:
 					
-						if line.startswith('G1 '):
+						if line.startswith('G1 ') or line.startswith('G0 '):
 						
 							# Create a fresh new bmesh and an object for it to go into
 							# We need the object here so we can make vertex groups later on (in bmesh_extras)
@@ -165,7 +167,7 @@ class ImportGCODE(Operator, ImportHelper):
 										elif t == 'print':
 											t = 'End of print'
 										
-									elif word.startswith('A'):
+									elif word.startswith('A') or word.startswith('E'):
 										aCur = gVal(word.replace(';',''))
 										if aPrev:
 											e = aCur - aPrev
@@ -184,7 +186,7 @@ class ImportGCODE(Operator, ImportHelper):
 								curI = len(bm.verts)-1
 								
 								# Add the vert to the correct vertex group
-								bm, group_index = bmesh_extras.add_to_group(bme=bm, verts = [curV], newGroup=False, groupName=t)
+								#bm, group_index = bmesh_extras.add_to_group(bme=bm, verts = [curV], newGroup=False, groupName=t)
 								
 								# Add an edge if we can!
 								if not preI is False:
